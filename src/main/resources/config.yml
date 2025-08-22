@@ -1,0 +1,52 @@
+bees:
+  tick_seconds: 10
+  unit_per_bottle: 60
+  offline_cap_hours: 8
+
+  rarity:
+    base_rare: 0.05
+    base_legendary: 0.005
+
+  workers:
+    I:   { base_honey_per_tick: 0.03 }
+    II:  { base_honey_per_tick: 0.045 }
+    III: { base_honey_per_tick: 0.06 }
+  drones:
+    I:   { honey_penalty_per_tick: 0.02, larvae_per_tick: 0.01 }
+    II:  { honey_penalty_per_tick: 0.03, larvae_per_tick: 0.015 }
+    III: { honey_penalty_per_tick: 0.04, larvae_per_tick: 0.02 }
+  queens:
+    I:   { multiplier: 1.0, rarity_bonus: 0.05 }
+    II:  { multiplier: 1.2, rarity_bonus: 0.10 }
+    III: { multiplier: 1.5, rarity_bonus: 0.15 }
+
+  hive_slots:
+    worker: 6
+    drone: 2
+    queen: 1
+
+  infusion_cost:
+    I:   { honey_I: 6, honey_II: 0, honey_III: 0 }
+    II:  { honey_I: 0, honey_II: 3, honey_III: 0 }
+    III: { honey_I: 0, honey_II: 0, honey_III: 1 }
+  infusion_type_weights:
+    I:   { worker: 0.80, drone: 0.18, queen: 0.02 }
+    II:  { worker: 0.65, drone: 0.25, queen: 0.10 }
+    III: { worker: 0.45, drone: 0.30, queen: 0.25 }
+  infusion_tier_shift:
+    I:   { down1: 0.20, same: 0.80, up1: 0.00, up2: 0.00 }
+    II:  { down1: 0.00, same: 0.60, up1: 0.40, up2: 0.00 }
+    III: { down1: 0.00, same: 0.30, up1: 0.60, up2: 0.10 }
+
+  ownership:
+    max_hives_per_player: 10
+    hive_cost:
+      base: 100000000
+      growth: 2.0
+    starter_pack:
+      queen: I
+      workers: { I: 2 }
+      drones:  { I: 1 }
+ 
+    honey_storage_limit: 16
+    larvae_storage_limit: 64
