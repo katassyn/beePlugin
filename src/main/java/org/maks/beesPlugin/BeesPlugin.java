@@ -30,7 +30,11 @@ public final class BeesPlugin extends JavaPlugin {
         saveDefaultConfig();
         beesConfig = new BeesConfig(getConfig());
         try {
-            File dbFile = new File(getDataFolder(), "bees.db");
+            String dbPath = getConfig().getString("database.file", "bees.db");
+            File dbFile = new File(dbPath);
+            if (!dbFile.isAbsolute()) {
+                dbFile = new File(getDataFolder(), dbPath);
+            }
             database = new Database("jdbc:sqlite:" + dbFile.getAbsolutePath());
         } catch (SQLException e) {
             getLogger().severe("Failed to init database: " + e.getMessage());
