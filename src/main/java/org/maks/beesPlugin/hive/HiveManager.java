@@ -1,6 +1,8 @@
 package org.maks.beesPlugin.hive;
 
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.maks.beesPlugin.config.BeesConfig;
 import org.maks.beesPlugin.dao.Database;
 import org.maks.beesPlugin.dao.HiveDao;
@@ -111,40 +113,82 @@ public class HiveManager {
         }
     }
 
-    public void collectAll(Player player) {
-        List<Hive> list = getHives(player.getUniqueId());
+    public boolean collectAll(Player player) {
+        UUID uuid = player.getUniqueId();
+        List<Hive> list = getHives(uuid);
+        List<ItemStack> items = new ArrayList<>();
         for (Hive hive : list) {
             for (Tier t : Tier.values()) {
                 int honey = hive.getHoneyStored().get(t);
-                int delivered = 0;
                 for (int i = 0; i < honey; i++) {
-                    var leftovers = player.getInventory().addItem(BeeItems.createHoney(t));
-                    if (!leftovers.isEmpty()) {
-                        // inventory full, put back remaining including this one
-                        hive.getHoneyStored().put(t, honey - delivered);
-                        break;
-                    }
-                    delivered++;
+                    items.add(BeeItems.createHoney(t));
                 }
-                if (honey == delivered) {
-                    hive.getHoneyStored().put(t, 0);
-                }
-
                 int larva = hive.getLarvaeStored().get(t);
-                delivered = 0;
                 for (int i = 0; i < larva; i++) {
-                    var leftovers = player.getInventory().addItem(BeeItems.createBee(BeeType.LARVA, t));
-                    if (!leftovers.isEmpty()) {
-                        hive.getLarvaeStored().put(t, larva - delivered);
-                        break;
-                    }
-                    delivered++;
-                }
-                if (larva == delivered) {
-                    hive.getLarvaeStored().put(t, 0);
+                    items.add(BeeItems.createBee(BeeType.LARVA, t));
                 }
             }
-            saveHive(player.getUniqueId(), hive);
         }
+
+        if (!hasInventorySpace(player, items)) {
+            return false;
+        }
+
+        try {
+            database.runInTransaction(conn -> {
+                for (Hive hive : list) {
+                    for (Tier t : Tier.values()) {
+                        hive.getHoneyStored().put(t, 0);
+                        hive.getLarvaeStored().put(t, 0);
+                    }
+                    try {
+                        hiveDao.updateHive(conn, uuid, hive);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        for (ItemStack it : items) {
+            var leftover = player.getInventory().addItem(it);
+            for (ItemStack s : leftover.values()) {
+                player.getWorld().dropItem(player.getLocation(), s);
+            }
+        }
+        return true;
+    }
+
+    public boolean hasInventorySpace(Player player, List<ItemStack> items) {
+        PlayerInventory inv = player.getInventory();
+        ItemStack[] contents = inv.getStorageContents().clone();
+        for (ItemStack original : items) {
+            ItemStack stack = original.clone();
+            boolean placed = false;
+            for (int i = 0; i < contents.length; i++) {
+                ItemStack existing = contents[i];
+                if (existing == null || existing.getType().isAir()) {
+                    contents[i] = stack;
+                    placed = true;
+                    break;
+                }
+                if (existing.isSimilar(stack) && existing.getAmount() < existing.getMaxStackSize()) {
+                    int space = existing.getMaxStackSize() - existing.getAmount();
+                    if (space >= stack.getAmount()) {
+                        existing.setAmount(existing.getAmount() + stack.getAmount());
+                        placed = true;
+                        break;
+                    } else {
+                        existing.setAmount(existing.getMaxStackSize());
+                        stack.setAmount(stack.getAmount() - space);
+                    }
+                }
+            }
+            if (!placed) return false;
+        }
+        return true;
     }
 }

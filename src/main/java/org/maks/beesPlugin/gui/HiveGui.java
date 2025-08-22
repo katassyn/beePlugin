@@ -5,7 +5,11 @@ import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.maks.beesPlugin.config.BeesConfig;
@@ -49,6 +53,28 @@ public class HiveGui implements Listener {
         }
         open.put(player.getUniqueId(), index);
         player.openInventory(inv);
+    }
+
+    @EventHandler
+    public void onClick(InventoryClickEvent event) {
+        UUID id = event.getWhoClicked().getUniqueId();
+        if (!open.containsKey(id)) return;
+        if (event.isShiftClick() || event.getClick() == ClickType.NUMBER_KEY ||
+                event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler
+    public void onDrag(InventoryDragEvent event) {
+        UUID id = event.getWhoClicked().getUniqueId();
+        if (!open.containsKey(id)) return;
+        for (int slot : event.getRawSlots()) {
+            if (slot < event.getView().getTopInventory().getSize()) {
+                event.setCancelled(true);
+                break;
+            }
+        }
     }
 
     @EventHandler

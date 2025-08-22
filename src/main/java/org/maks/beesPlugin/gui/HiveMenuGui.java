@@ -102,17 +102,29 @@ public class HiveMenuGui implements Listener {
                 }
                 Hive hive = hiveManager.createHive(id, System.currentTimeMillis() / 1000);
                 if (hive != null && list.isEmpty()) {
-                    player.getInventory().addItem(BeeItems.createBee(BeeType.QUEEN, Tier.I));
-                    player.getInventory().addItem(BeeItems.createBee(BeeType.WORKER, Tier.I));
-                    player.getInventory().addItem(BeeItems.createBee(BeeType.WORKER, Tier.I));
-                    player.getInventory().addItem(BeeItems.createBee(BeeType.DRONE, Tier.I));
+                    var starters = List.of(
+                            BeeItems.createBee(BeeType.QUEEN, Tier.I),
+                            BeeItems.createBee(BeeType.WORKER, Tier.I),
+                            BeeItems.createBee(BeeType.WORKER, Tier.I),
+                            BeeItems.createBee(BeeType.DRONE, Tier.I)
+                    );
+                    if (hiveManager.hasInventorySpace(player, new ArrayList<>(starters))) {
+                        for (ItemStack it : starters) {
+                            player.getInventory().addItem(it);
+                        }
+                    } else {
+                        player.sendMessage(ChatColor.RED + "Not enough inventory space for starter bees");
+                    }
                 }
                 player.sendMessage(ChatColor.GREEN + "Bought new hive");
                 open(player);
             }
         } else if (slot == 26) {
-            hiveManager.collectAll(player);
-            player.sendMessage(ChatColor.GREEN + "Collected hive products");
+            if (hiveManager.collectAll(player)) {
+                player.sendMessage(ChatColor.GREEN + "Collected hive products");
+            } else {
+                player.sendMessage(ChatColor.RED + "Make space in your inventory first");
+            }
             open(player);
         } else if (slot == 25) {
             infusionGui.open(player);
