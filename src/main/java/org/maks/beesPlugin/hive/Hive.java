@@ -8,6 +8,7 @@ import org.maks.beesPlugin.config.WorkerConfig;
 import java.util.*;
 
 public class Hive {
+    private int id;
     private Tier queen; // null if none
     private final List<Tier> workers = new ArrayList<>();
     private final List<Tier> drones = new ArrayList<>();
@@ -19,6 +20,14 @@ public class Hive {
     private final EnumMap<Tier, Integer> larvaeStored = new EnumMap<>(Tier.class);
 
     private long lastTick; // epoch seconds
+
+    public int getId() { return id; }
+
+    public void setId(int id) { this.id = id; }
+
+    public long getLastTick() { return lastTick; }
+
+    public void setLastTick(long lastTick) { this.lastTick = lastTick; }
 
     private final Random random = new Random();
 
