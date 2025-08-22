@@ -24,6 +24,17 @@ public class HiveManager {
     public void loadPlayer(UUID uuid, long now) {
         try {
             List<Hive> list = hiveDao.loadHives(uuid, now);
+            // process offline progress before making hives available
+            database.runInTransaction(conn -> {
+                for (Hive hive : list) {
+                    hive.tick(config, now);
+                    try {
+                        hiveDao.updateHive(conn, uuid, hive);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
             hives.put(uuid, list);
         } catch (SQLException e) {
             e.printStackTrace();
