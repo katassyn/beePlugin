@@ -2,16 +2,19 @@ package org.maks.beesPlugin.gui;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.maks.beesPlugin.config.BeesConfig;
 import org.maks.beesPlugin.hive.BeeType;
 import org.maks.beesPlugin.hive.Hive;
@@ -39,7 +42,7 @@ public class HiveGui implements Listener {
             return;
         }
         Hive hive = list.get(index);
-        Inventory inv = Bukkit.createInventory(player, 9, "Hive " + (index + 1));
+        Inventory inv = Bukkit.createInventory(player, 18, "Hive " + (index + 1));
         int w = 0;
         for (Tier t : hive.getWorkers()) {
             inv.setItem(w++, BeeItems.createBee(BeeType.WORKER, t));
@@ -51,6 +54,8 @@ public class HiveGui implements Listener {
         for (Tier t : hive.getDrones()) {
             inv.setItem(d++, BeeItems.createBee(BeeType.DRONE, t));
         }
+        inv.setItem(9, createHoneyInfo(hive));
+        inv.setItem(10, createLarvaeInfo(hive));
         open.put(player.getUniqueId(), index);
         player.openInventory(inv);
     }
@@ -59,6 +64,11 @@ public class HiveGui implements Listener {
     public void onClick(InventoryClickEvent event) {
         UUID id = event.getWhoClicked().getUniqueId();
         if (!open.containsKey(id)) return;
+        int raw = event.getRawSlot();
+        if (raw < event.getView().getTopInventory().getSize() && raw >= 9) {
+            event.setCancelled(true);
+            return;
+        }
         if (event.isShiftClick() || event.getClick() == ClickType.NUMBER_KEY ||
                 event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
             event.setCancelled(true);
@@ -133,6 +143,42 @@ public class HiveGui implements Listener {
         for (ItemStack s : left.values()) {
             player.getWorld().dropItem(player.getLocation(), s);
         }
+    }
+
+    private ItemStack createHoneyInfo(Hive hive) {
+        ItemStack item = new ItemStack(Material.HONEYCOMB);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.GOLD + "Honey");
+        List<String> lore = new ArrayList<>();
+        double rate = hive.honeyPerMinute(config);
+        lore.add(ChatColor.GRAY + "Rate: " + ChatColor.WHITE + String.format(Locale.US, "%.1f", rate) + "/min");
+        lore.add(ChatColor.GRAY + "Stored:");
+        for (Tier t : Tier.values()) {
+            int stored = hive.getHoneyStored().get(t);
+            lore.add(ChatColor.WHITE + t.name() + ChatColor.GRAY + ": " + stored + "/" + config.honeyStorageLimit);
+        }
+        meta.setLore(lore);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    private ItemStack createLarvaeInfo(Hive hive) {
+        ItemStack item = new ItemStack(Material.SLIME_BALL);
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(ChatColor.GREEN + "Larvae");
+        List<String> lore = new ArrayList<>();
+        double rate = hive.larvaePerMinute(config);
+        lore.add(ChatColor.GRAY + "Rate: " + ChatColor.WHITE + String.format(Locale.US, "%.1f", rate) + "/min");
+        lore.add(ChatColor.GRAY + "Stored:");
+        for (Tier t : Tier.values()) {
+            int stored = hive.getLarvaeStored().get(t);
+            lore.add(ChatColor.WHITE + t.name() + ChatColor.GRAY + ": " + stored + "/" + config.larvaeStorageLimit);
+        }
+        meta.setLore(lore);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        item.setItemMeta(meta);
+        return item;
     }
 }
 

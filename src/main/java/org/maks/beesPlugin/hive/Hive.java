@@ -63,6 +63,55 @@ public class Hive {
         return larvaeStored;
     }
 
+    /**
+     * Calculates the amount of honey produced in a single tick based on the
+     * current hive composition.
+     */
+    public double honeyPerTick(BeesConfig cfg) {
+        if (queen == null) return 0.0;
+        double base = 0;
+        for (Tier t : workers) {
+            WorkerConfig wc = cfg.workers.get(t);
+            base += wc.baseHoneyPerTick();
+        }
+        double cut = 0;
+        for (Tier t : drones) {
+            DroneConfig dc = cfg.drones.get(t);
+            cut += dc.honeyPenaltyPerTick();
+        }
+        QueenConfig qc = cfg.queens.get(queen);
+        return Math.max(0, base - cut) * qc.multiplier();
+    }
+
+    /**
+     * Calculates the amount of larvae produced in a single tick based on the
+     * current hive composition.
+     */
+    public double larvaePerTick(BeesConfig cfg) {
+        if (queen == null) return 0.0;
+        double larvae = 0;
+        for (Tier t : drones) {
+            DroneConfig dc = cfg.drones.get(t);
+            larvae += dc.larvaePerTick();
+        }
+        QueenConfig qc = cfg.queens.get(queen);
+        return larvae * qc.multiplier();
+    }
+
+    /**
+     * @return honey production per minute.
+     */
+    public double honeyPerMinute(BeesConfig cfg) {
+        return honeyPerTick(cfg) * (60.0 / cfg.tickSeconds);
+    }
+
+    /**
+     * @return larvae production per minute.
+     */
+    public double larvaePerMinute(BeesConfig cfg) {
+        return larvaePerTick(cfg) * (60.0 / cfg.tickSeconds);
+    }
+
     public void tick(BeesConfig config, long now) {
         long diff = now - lastTick;
         long maxSeconds = config.offlineCapHours * 3600L;
