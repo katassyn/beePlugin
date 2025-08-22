@@ -5,6 +5,7 @@ database:
   user: "root"
   password: ""
 
+
 bees:
   tick_seconds: 10
   unit_per_bottle: 60
