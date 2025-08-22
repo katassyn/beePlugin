@@ -13,7 +13,7 @@ public class PlayerDao {
 
     public void createPlayer(UUID uuid) throws SQLException {
         try (Connection conn = db.getConnection();
-             PreparedStatement ps = conn.prepareStatement("INSERT OR IGNORE INTO players(uuid) VALUES (?)")) {
+             PreparedStatement ps = conn.prepareStatement("INSERT IGNORE INTO players(uuid) VALUES (?)")) {
             ps.setString(1, uuid.toString());
             ps.executeUpdate();
         }
