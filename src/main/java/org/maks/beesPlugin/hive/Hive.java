@@ -69,10 +69,28 @@ public class Hive {
         if (diff > maxSeconds) diff = maxSeconds;
         long ticks = diff / config.tickSeconds;
         if (ticks <= 0) return;
-        for (long i = 0; i < ticks; i++) {
-            tickOnce(config);
+
+        if (isHoneyFull(config)) {
+            lastTick = now;
+            return;
         }
-        lastTick += ticks * config.tickSeconds;
+
+        long processed = 0;
+        boolean full = false;
+        while (processed < ticks) {
+            tickOnce(config);
+            processed++;
+            if (isHoneyFull(config)) {
+                full = true;
+                break;
+            }
+        }
+
+        if (full) {
+            lastTick = now;
+        } else {
+            lastTick += processed * config.tickSeconds;
+        }
     }
 
     private void tickOnce(BeesConfig cfg) {
@@ -139,5 +157,14 @@ public class Hive {
             if (r <= cumulative) return t;
         }
         return Tier.I;
+    }
+
+    private boolean isHoneyFull(BeesConfig cfg) {
+        for (Tier t : Tier.values()) {
+            if (honeyStored.get(t) < cfg.honeyStorageLimit) {
+                return false;
+            }
+        }
+        return true;
     }
 }
