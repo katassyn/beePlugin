@@ -31,7 +31,9 @@ public class BeeLockerDao {
     }
 
     public void upsert(Connection conn, UUID player, BeeType type, Tier tier, int amount) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement("INSERT INTO bee_locker(player_uuid,type,tier,amount) VALUES (?,?,?,?) ON CONFLICT(player_uuid,type,tier) DO UPDATE SET amount=excluded.amount")) {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO bee_locker(player_uuid,type,tier,amount) VALUES (?,?,?,?) " +
+                "ON DUPLICATE KEY UPDATE amount=VALUES(amount)")) {
             ps.setString(1, player.toString());
             ps.setString(2, type.name());
             ps.setInt(3, tier.getLevel());
