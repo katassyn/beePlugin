@@ -4,52 +4,56 @@ import java.sql.*;
 import java.util.function.Consumer;
 
 /**
- * Simple wrapper around a JDBC connection to a SQLite database.
+ * Simple wrapper around a JDBC connection to a MySQL database.
  * Responsible for creating the schema and running small transactions.
  */
 public class Database {
     private final String url;
+    private final String user;
+    private final String password;
 
-    public Database(String url) throws SQLException {
+    public Database(String url, String user, String password) throws SQLException {
         this.url = url;
+        this.user = user;
+        this.password = password;
         init();
     }
 
     private void init() throws SQLException {
         try (Connection conn = getConnection(); Statement st = conn.createStatement()) {
             st.executeUpdate("CREATE TABLE IF NOT EXISTS players(" +
-                    "uuid TEXT PRIMARY KEY\n" +
-                    ")");
+                    "uuid VARCHAR(36) PRIMARY KEY" +
+                    ") ENGINE=InnoDB");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS hives(" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                    "player_uuid TEXT NOT NULL," +
-                    "last_tick INTEGER NOT NULL," +
-                    "honey_i INTEGER NOT NULL DEFAULT 0," +
-                    "honey_ii INTEGER NOT NULL DEFAULT 0," +
-                    "honey_iii INTEGER NOT NULL DEFAULT 0," +
-                    "larvae_i INTEGER NOT NULL DEFAULT 0," +
-                    "larvae_ii INTEGER NOT NULL DEFAULT 0," +
-                    "larvae_iii INTEGER NOT NULL DEFAULT 0," +
-                    "queen INTEGER" +
-                    ")");
+                    "id INT AUTO_INCREMENT PRIMARY KEY," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "last_tick BIGINT NOT NULL," +
+                    "honey_i INT NOT NULL DEFAULT 0," +
+                    "honey_ii INT NOT NULL DEFAULT 0," +
+                    "honey_iii INT NOT NULL DEFAULT 0," +
+                    "larvae_i INT NOT NULL DEFAULT 0," +
+                    "larvae_ii INT NOT NULL DEFAULT 0," +
+                    "larvae_iii INT NOT NULL DEFAULT 0," +
+                    "queen INT" +
+                    ") ENGINE=InnoDB");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS hive_bees(" +
-                    "hive_id INTEGER NOT NULL," +
-                    "type TEXT NOT NULL," +
-                    "slot INTEGER NOT NULL," +
-                    "tier INTEGER NOT NULL" +
-                    ")");
+                    "hive_id INT NOT NULL," +
+                    "type VARCHAR(255) NOT NULL," +
+                    "slot INT NOT NULL," +
+                    "tier INT NOT NULL" +
+                    ") ENGINE=InnoDB");
             st.executeUpdate("CREATE TABLE IF NOT EXISTS bee_locker(" +
-                    "player_uuid TEXT NOT NULL," +
-                    "type TEXT NOT NULL," +
-                    "tier INTEGER NOT NULL," +
-                    "amount INTEGER NOT NULL," +
+                    "player_uuid VARCHAR(36) NOT NULL," +
+                    "type VARCHAR(255) NOT NULL," +
+                    "tier INT NOT NULL," +
+                    "amount INT NOT NULL," +
                     "PRIMARY KEY(player_uuid,type,tier)" +
-                    ")");
+                    ") ENGINE=InnoDB");
         }
     }
 
     public Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(url);
+        return DriverManager.getConnection(url, user, password);
     }
 
     /**

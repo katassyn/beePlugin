@@ -1,5 +1,10 @@
 database:
-  file: bees.db
+  host: "localhost"
+  port: "3306"
+  name: "minecraft"
+  user: "root"
+  password: ""
+
 
 bees:
   tick_seconds: 10
