@@ -99,6 +99,7 @@ public class HiveGui implements Listener {
                 giveBack(event.getPlayer(), it);
             }
         }
+        hiveManager.saveHive(id, hive);
     }
 
     private void giveBack(Player player, ItemStack stack) {

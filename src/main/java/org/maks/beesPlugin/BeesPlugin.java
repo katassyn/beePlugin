@@ -4,11 +4,15 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.maks.beesPlugin.command.HiveCommand;
 import org.maks.beesPlugin.config.BeesConfig;
+import org.maks.beesPlugin.dao.*;
 import org.maks.beesPlugin.gui.HiveGui;
 import org.maks.beesPlugin.gui.HiveMenuGui;
 import org.maks.beesPlugin.gui.InfusionGui;
 import org.maks.beesPlugin.hive.HiveManager;
 import net.milkbowl.vault.economy.Economy;
+
+import java.io.File;
+import java.sql.SQLException;
 
 public final class BeesPlugin extends JavaPlugin {
 
@@ -18,12 +22,24 @@ public final class BeesPlugin extends JavaPlugin {
     private HiveGui hiveGui;
     private HiveMenuGui hiveMenuGui;
     private InfusionGui infusionGui;
+    private Database database;
+    private PlayerDao playerDao;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         beesConfig = new BeesConfig(getConfig());
-        hiveManager = new HiveManager(beesConfig);
+        try {
+            File dbFile = new File(getDataFolder(), "bees.db");
+            database = new Database("jdbc:sqlite:" + dbFile.getAbsolutePath());
+        } catch (SQLException e) {
+            getLogger().severe("Failed to init database: " + e.getMessage());
+            return;
+        }
+        HiveBeeDao hiveBeeDao = new HiveBeeDao(database);
+        HiveDao hiveDao = new HiveDao(database, hiveBeeDao);
+        playerDao = new PlayerDao(database);
+        hiveManager = new HiveManager(beesConfig, database, hiveDao);
         setupEconomy();
         hiveGui = new HiveGui(hiveManager, beesConfig);
         infusionGui = new InfusionGui(beesConfig);
@@ -35,6 +51,7 @@ public final class BeesPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(hiveGui, this);
         getServer().getPluginManager().registerEvents(hiveMenuGui, this);
         getServer().getPluginManager().registerEvents(infusionGui, this);
+        getServer().getPluginManager().registerEvents(new PlayerListener(hiveManager, playerDao), this);
 
         long tick = beesConfig.tickSeconds * 20L;
         getServer().getScheduler().runTaskTimer(this, () -> {
@@ -56,7 +73,6 @@ public final class BeesPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+        // cleanup if needed
     }
 }
-

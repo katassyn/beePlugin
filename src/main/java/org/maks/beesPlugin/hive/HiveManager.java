@@ -2,16 +2,37 @@ package org.maks.beesPlugin.hive;
 
 import org.bukkit.entity.Player;
 import org.maks.beesPlugin.config.BeesConfig;
+import org.maks.beesPlugin.dao.Database;
+import org.maks.beesPlugin.dao.HiveDao;
 import org.maks.beesPlugin.item.BeeItems;
 
+import java.sql.SQLException;
 import java.util.*;
 
 public class HiveManager {
     private final BeesConfig config;
+    private final Database database;
+    private final HiveDao hiveDao;
     private final Map<UUID, List<Hive>> hives = new HashMap<>();
 
-    public HiveManager(BeesConfig config) {
+    public HiveManager(BeesConfig config, Database database, HiveDao hiveDao) {
         this.config = config;
+        this.database = database;
+        this.hiveDao = hiveDao;
+    }
+
+    public void loadPlayer(UUID uuid, long now) {
+        try {
+            List<Hive> list = hiveDao.loadHives(uuid, now);
+            hives.put(uuid, list);
+        } catch (SQLException e) {
+            e.printStackTrace();
+            hives.put(uuid, new ArrayList<>());
+        }
+    }
+
+    public void unloadPlayer(UUID uuid) {
+        hives.remove(uuid);
     }
 
     public List<Hive> getHives(UUID uuid) {
@@ -29,15 +50,53 @@ public class HiveManager {
             return null;
         }
         Hive hive = new Hive(now);
-        list.add(hive);
-        return hive;
+        try {
+            database.runInTransaction(conn -> {
+                try {
+                    hiveDao.createHive(conn, uuid, hive);
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            list.add(hive);
+            return hive;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public void saveHive(UUID uuid, Hive hive) {
+        try {
+            database.runInTransaction(conn -> {
+                try {
+                    hiveDao.updateHive(conn, uuid, hive);
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     public void tickAll(long now) {
-        for (List<Hive> list : hives.values()) {
-            for (Hive hive : list) {
-                hive.tick(config, now);
-            }
+        try {
+            database.runInTransaction(conn -> {
+                for (Map.Entry<UUID, List<Hive>> entry : hives.entrySet()) {
+                    UUID uuid = entry.getKey();
+                    for (Hive hive : entry.getValue()) {
+                        hive.tick(config, now);
+                        try {
+                            hiveDao.updateHive(conn, uuid, hive);
+                        } catch (SQLException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+            });
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -74,6 +133,7 @@ public class HiveManager {
                     hive.getLarvaeStored().put(t, 0);
                 }
             }
+            saveHive(player.getUniqueId(), hive);
         }
     }
 }
