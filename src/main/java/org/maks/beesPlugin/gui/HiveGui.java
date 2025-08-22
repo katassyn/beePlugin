@@ -108,7 +108,7 @@ public class HiveGui implements Listener {
             if (bee != null && bee.type() == BeeType.QUEEN && queenStack.getAmount() == 1) {
                 hive.setQueen(bee.tier());
             } else {
-                giveBack(event.getPlayer(), queenStack);
+                giveBack((Player) event.getPlayer(), queenStack);
                 inv.setItem(6, null);
             }
         }
@@ -120,7 +120,7 @@ public class HiveGui implements Listener {
             if (bee != null && bee.type() == BeeType.WORKER && it.getAmount() == 1) {
                 hive.getWorkers().add(bee.tier());
             } else {
-                giveBack(event.getPlayer(), it);
+                giveBack((Player) event.getPlayer(), it);
             }
         }
 
@@ -132,7 +132,7 @@ public class HiveGui implements Listener {
             if (bee != null && bee.type() == BeeType.DRONE && it.getAmount() == 1) {
                 hive.getDrones().add(bee.tier());
             } else {
-                giveBack(event.getPlayer(), it);
+                giveBack((Player) event.getPlayer(), it);
             }
         }
         hiveManager.saveHive(id, hive);
