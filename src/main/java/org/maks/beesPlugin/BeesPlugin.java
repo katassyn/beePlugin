@@ -11,7 +11,6 @@ import org.maks.beesPlugin.gui.InfusionGui;
 import org.maks.beesPlugin.hive.HiveManager;
 import net.milkbowl.vault.economy.Economy;
 
-import java.io.File;
 import java.sql.SQLException;
 
 public final class BeesPlugin extends JavaPlugin {
@@ -30,8 +29,14 @@ public final class BeesPlugin extends JavaPlugin {
         saveDefaultConfig();
         beesConfig = new BeesConfig(getConfig());
         try {
-            File dbFile = new File(getDataFolder(), "bees.db");
-            database = new Database("jdbc:sqlite:" + dbFile.getAbsolutePath());
+            String host = getConfig().getString("database.host", "localhost");
+            String portStr = getConfig().getString("database.port", "3306");
+            int port = Integer.parseInt(portStr);
+            String dbName = getConfig().getString("database.name", "minecraft");
+            String user = getConfig().getString("database.user", "root");
+            String password = getConfig().getString("database.password", "");
+            String url = "jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+            database = new Database(url, user, password);
         } catch (SQLException e) {
             getLogger().severe("Failed to init database: " + e.getMessage());
             return;
