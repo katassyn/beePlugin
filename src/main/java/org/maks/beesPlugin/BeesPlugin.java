@@ -67,14 +67,16 @@ public final class BeesPlugin extends JavaPlugin {
     }
 
     private void setupEconomy() {
-        try {
-            RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
-            if (rsp != null) {
-                economy = rsp.getProvider();
-            }
-        } catch (NoClassDefFoundError e) {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
             getLogger().warning("Vault not found, economy disabled");
+            return;
         }
+        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+        if (rsp == null) {
+            getLogger().warning("No economy provider found, economy disabled");
+            return;
+        }
+        economy = rsp.getProvider();
     }
 
     @Override
