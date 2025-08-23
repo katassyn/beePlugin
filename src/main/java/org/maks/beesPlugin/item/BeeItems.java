@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 public class BeeItems {
 
     public static ItemStack createHoney(Tier tier) {
-        ItemStack item = new ItemStack(Material.HONEYCOMB);
+        ItemStack item = new ItemStack(Material.HONEY_BOTTLE);
         ItemMeta meta = item.getItemMeta();
         meta.addEnchant(Enchantment.DURABILITY, 10, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
@@ -24,8 +24,24 @@ public class BeeItems {
             case II -> "§5";
             case III -> "§6";
         };
-        meta.setDisplayName(color + "[ " + tier.getLevel() + " ] Honey Comb");
-        meta.setLore(List.of("§o§7Applies a new §fQuality§7 to an item."));
+        meta.setDisplayName(color + "[ " + tier.name() + " ] Honey Bottle");
+        List<String> lore = new java.util.ArrayList<>();
+        lore.add("§o§7Applies a new §fQuality§7 to an item.");
+        switch (tier) {
+            case I -> lore.addAll(List.of(
+                    "§o§7Roll range: §f-10% §7to §f+10%.",
+                    "§o§7Basic crafting material"
+            ));
+            case II -> lore.addAll(List.of(
+                    "§o§7Roll range: §f0% §7to §f+20%.",
+                    "§o§aRare crafting material"
+            ));
+            case III -> lore.addAll(List.of(
+                    "§o§7Roll range: §f+10% §7to §f+30%.",
+                    "§o§cLegendary crafting material"
+            ));
+        }
+        meta.setLore(lore);
         meta.setUnbreakable(true);
         item.setItemMeta(meta);
         return item;
@@ -45,7 +61,7 @@ public class BeeItems {
             case II -> "§5";
             case III -> "§6";
         };
-        String name = color + "[ " + tier.getLevel() + " ] " + switch (type) {
+        String name = color + "[ " + tier.name() + " ] " + switch (type) {
             case WORKER -> "Worker Bee";
             case DRONE -> "Drone Bee";
             case QUEEN -> "Queen Bee";
@@ -59,7 +75,7 @@ public class BeeItems {
 
     public record BeeItem(BeeType type, Tier tier) {}
 
-    private static final Pattern NAME_PATTERN = Pattern.compile("\\[ (\\d) \\] (.+)");
+    private static final Pattern NAME_PATTERN = Pattern.compile("\\[ ([^\\]]+) \\] (.+)");
 
     public static BeeItem parse(ItemStack item) {
         if (item == null) return null;
@@ -70,13 +86,17 @@ public class BeeItems {
         String stripped = meta.getDisplayName().replaceAll("§[0-9a-fk-or]", "");
         Matcher m = NAME_PATTERN.matcher(stripped);
         if (!m.find()) return null;
-        int level;
+        String token = m.group(1);
+        Tier tier;
         try {
-            level = Integer.parseInt(m.group(1));
+            tier = Tier.fromLevel(Integer.parseInt(token));
         } catch (NumberFormatException e) {
-            return null;
+            try {
+                tier = Tier.valueOf(token);
+            } catch (IllegalArgumentException ex) {
+                return null;
+            }
         }
-        Tier tier = Tier.fromLevel(level);
         String name = m.group(2).toLowerCase();
         BeeType beeType;
         if (name.contains("queen")) beeType = BeeType.QUEEN;
@@ -88,18 +108,21 @@ public class BeeItems {
     }
 
     public static Tier parseHoney(ItemStack item) {
-        if (item == null || item.getType() != Material.HONEYCOMB) return null;
+        if (item == null || item.getType() != Material.HONEY_BOTTLE) return null;
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return null;
         String stripped = meta.getDisplayName().replaceAll("§[0-9a-fk-or]", "");
         Matcher m = NAME_PATTERN.matcher(stripped);
         if (!m.find()) return null;
-        int level;
+        String token = m.group(1);
         try {
-            level = Integer.parseInt(m.group(1));
+            return Tier.fromLevel(Integer.parseInt(token));
         } catch (NumberFormatException e) {
-            return null;
+            try {
+                return Tier.valueOf(token);
+            } catch (IllegalArgumentException ex) {
+                return null;
+            }
         }
-        return Tier.fromLevel(level);
     }
 }
