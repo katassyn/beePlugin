@@ -11,6 +11,7 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.maks.beesPlugin.BeesPlugin;
 import org.maks.beesPlugin.config.BeesConfig;
 import org.maks.beesPlugin.hive.Hive;
 import org.maks.beesPlugin.hive.HiveManager;
@@ -128,7 +129,8 @@ public class HiveMenuGui implements Listener {
             }
             open(player);
         } else if (slot == 25) {
-            infusionGui.open(player);
+            event.getView().setCursor(null);
+            Bukkit.getScheduler().runTask(BeesPlugin.getPlugin(BeesPlugin.class), () -> infusionGui.open(player));
         }
     }
 

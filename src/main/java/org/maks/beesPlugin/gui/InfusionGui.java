@@ -6,8 +6,6 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
@@ -55,18 +53,20 @@ public class InfusionGui implements Listener {
         int raw = event.getRawSlot();
         Inventory top = event.getView().getTopInventory();
         if (raw < top.getSize()) {
+            event.setCancelled(true);
             if (raw == LARVA_SLOT) {
                 ItemStack cursor = event.getCursor();
                 ItemStack current = event.getCurrentItem();
                 if (cursor != null && !cursor.getType().isAir()) {
                     BeeItems.BeeItem bee = BeeItems.parse(cursor);
                     if (bee == null || bee.type() != BeeType.LARVA || cursor.getAmount() != 1) {
-                        event.setCancelled(true);
                         return;
                     }
-                } else if (current != null && current.getType().toString().endsWith("GLASS_PANE")) {
-                    event.setCancelled(true);
-                    return;
+                    top.setItem(raw, cursor);
+                    event.getView().setCursor(null);
+                } else if (current != null && !current.getType().toString().endsWith("GLASS_PANE")) {
+                    event.getView().setCursor(current);
+                    top.setItem(raw, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
                 }
             } else if (raw == HONEY_SLOT) {
                 ItemStack cursor = event.getCursor();
@@ -74,15 +74,15 @@ public class InfusionGui implements Listener {
                 if (cursor != null && !cursor.getType().isAir()) {
                     Tier t = BeeItems.parseHoney(cursor);
                     if (t == null) {
-                        event.setCancelled(true);
                         return;
                     }
-                } else if (current != null && current.getType().toString().endsWith("GLASS_PANE")) {
-                    event.setCancelled(true);
-                    return;
+                    top.setItem(raw, cursor);
+                    event.getView().setCursor(null);
+                } else if (current != null && !current.getType().toString().endsWith("GLASS_PANE")) {
+                    event.getView().setCursor(current);
+                    top.setItem(raw, createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey"));
                 }
             } else if (raw == INFUSE_SLOT) {
-                event.setCancelled(true);
                 Player player = (Player) event.getWhoClicked();
                 Inventory inv = top;
                 ItemStack larvaStack = inv.getItem(LARVA_SLOT);
@@ -90,7 +90,6 @@ public class InfusionGui implements Listener {
                 BeeItems.BeeItem larva = BeeItems.parse(larvaStack);
                 Tier honeyTier = BeeItems.parseHoney(honeyStack);
                 if (larva == null || larva.type() != BeeType.LARVA || larvaStack.getAmount() != 1 || honeyTier == null) {
-
                     return;
                 }
                 BeesConfig.InfusionCost cost = config.infusionCost.get(larva.tier());
@@ -100,7 +99,6 @@ public class InfusionGui implements Listener {
                     case III -> cost.honeyIII();
                 };
                 if (honeyStack.getAmount() < required) {
-
                     return;
                 }
                 honeyStack.setAmount(honeyStack.getAmount() - required);
@@ -111,14 +109,6 @@ public class InfusionGui implements Listener {
                 }
                 inv.setItem(LARVA_SLOT, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
                 performInfusion(player, larva.tier());
-            } else {
-                event.setCancelled(true);
-                return;
-            }
-            if (event.isShiftClick() || event.getClick() == ClickType.NUMBER_KEY ||
-                    event.getAction() == InventoryAction.COLLECT_TO_CURSOR ||
-                    event.getAction().name().contains("DROP")) {
-                event.setCancelled(true);
             }
         } else {
             if (event.isShiftClick()) {
