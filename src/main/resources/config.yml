@@ -9,6 +9,7 @@ database:
 bees:
   tick_seconds: 10
   unit_per_bottle: 60
+  unit_per_larva: 60
   offline_cap_hours: 8
 
   rarity:
