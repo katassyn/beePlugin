@@ -294,7 +294,6 @@ public class HiveGui implements Listener {
         return slot == HONEY_RATE_SLOT || slot == HONEY_CHANCE_SLOT ||
                 slot == LARVA_RATE_SLOT || slot == LARVA_CHANCE_SLOT;
     }
-
     private ItemStack createPane(Material material, String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
