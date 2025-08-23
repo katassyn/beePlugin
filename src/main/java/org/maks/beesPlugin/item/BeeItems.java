@@ -18,7 +18,7 @@ public class BeeItems {
         ItemStack item = new ItemStack(Material.HONEY_BOTTLE);
         ItemMeta meta = item.getItemMeta();
         meta.addEnchant(Enchantment.DURABILITY, 10, true);
-        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
         String color = switch (tier) {
             case I -> "§9";
             case II -> "§5";
@@ -50,12 +50,12 @@ public class BeeItems {
     public static ItemStack createBee(BeeType type, Tier tier) {
         Material material = switch (type) {
             case WORKER, QUEEN, DRONE -> Material.BREAD;
-            case LARVA -> Material.SLIME_BALL;
+            case LARVA -> Material.COOKIE;
         };
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.addEnchant(Enchantment.DURABILITY, 10, true);
-        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+        meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
         String color = switch (tier) {
             case I -> "§9";
             case II -> "§5";
@@ -67,7 +67,50 @@ public class BeeItems {
             case QUEEN -> "Queen Bee";
             case LARVA -> "Bee Larva";
         };
-        meta.setDisplayName(name);
+        List<String> lore = switch (type) {
+            case QUEEN -> {
+                String mult = switch (tier) {
+                    case I -> "1.0x";
+                    case II -> "1.2x";
+                    case III -> "1.5x";
+                };
+                String chance = switch (tier) {
+                    case I -> "+5%";
+                    case II -> "+10%";
+                    case III -> "+15%";
+                };
+                yield List.of(
+                        "§o§7Hive multiplier: §f" + mult,
+                        "§o§7Rarer honey chance: §a" + chance
+                );
+            }
+            case WORKER -> {
+                String prod = switch (tier) {
+                    case I -> "0.50";
+                    case II -> "0.75";
+                    case III -> "1.00";
+                };
+                yield List.of("§o§7Base honey production: §f" + prod);
+            }
+            case DRONE -> {
+                String larvae = switch (tier) {
+                    case I -> "0.50";
+                    case II -> "0.75";
+                    case III -> "1.00";
+                };
+                String penalty = switch (tier) {
+                    case I -> "-1.00";
+                    case II -> "-0.75";
+                    case III -> "-0.50";
+                };
+                yield List.of(
+                        "§o§7Larvae production: §f" + larvae,
+                        "§o§7Reduces base honey production: §f" + penalty
+                );
+            }
+            case LARVA -> List.of("§o§7Can transform into any type of bee.");
+        };
+        meta.setLore(lore);
         meta.setUnbreakable(true);
         item.setItemMeta(meta);
         return item;
@@ -80,7 +123,7 @@ public class BeeItems {
     public static BeeItem parse(ItemStack item) {
         if (item == null) return null;
         Material type = item.getType();
-        if (type != Material.BREAD && type != Material.SLIME_BALL) return null;
+        if (type != Material.BREAD && type != Material.COOKIE) return null;
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return null;
         String stripped = meta.getDisplayName().replaceAll("§[0-9a-fk-or]", "");
