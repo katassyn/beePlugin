@@ -130,40 +130,12 @@ public class HiveGui implements Listener {
                         event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
                     event.setCancelled(true);
                 }
-            } else if (isHoneySlot(raw) || isLarvaSlot(raw)) {
-                ItemStack cursor = event.getCursor();
-                if (cursor != null && !cursor.getType().isAir()) {
-                    boolean honey = isHoneySlot(raw);
-                    if (honey) {
-                        Tier t = BeeItems.parseHoney(cursor);
-                        if (t == null) {
-                            event.setCancelled(true);
-                            return;
-                        }
-                    } else {
-                        BeeItems.BeeItem bee = BeeItems.parse(cursor);
-                        if (bee == null || bee.type() != BeeType.LARVA) {
-                            event.setCancelled(true);
-                            return;
-                        }
-                    }
-                    event.setCancelled(true);
-                    top.setItem(raw, cursor);
-                    event.getView().setCursor(null);
-                }
-                if (event.isShiftClick() || event.getClick() == ClickType.NUMBER_KEY ||
-                        event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
-                    event.setCancelled(true);
-                }
+            } else if (isHoneySlot(raw) || isLarvaSlot(raw) || isInfoSlot(raw)) {
+                event.setCancelled(true);
             } else {
                 event.setCancelled(true);
             }
         } else {
-            if (event.isShiftClick()) {
-                event.setCancelled(true);
-            }
-        } else {
-            // Bottom inventory interaction
             if (event.isShiftClick()) {
                 event.setCancelled(true);
             }
@@ -280,7 +252,6 @@ public class HiveGui implements Listener {
             hive.getLarvaeStored().put(tier, amount);
         }
 
-
         hiveManager.saveHive(id, hive);
     }
 
@@ -319,6 +290,10 @@ public class HiveGui implements Listener {
         return false;
     }
 
+    private boolean isInfoSlot(int slot) {
+        return slot == HONEY_RATE_SLOT || slot == HONEY_CHANCE_SLOT ||
+                slot == LARVA_RATE_SLOT || slot == LARVA_CHANCE_SLOT;
+    }
     private ItemStack createPane(Material material, String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
