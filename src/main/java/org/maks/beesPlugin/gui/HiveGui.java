@@ -162,6 +162,11 @@ public class HiveGui implements Listener {
             if (event.isShiftClick()) {
                 event.setCancelled(true);
             }
+        } else {
+            // Bottom inventory interaction
+            if (event.isShiftClick()) {
+                event.setCancelled(true);
+            }
         }
     }
 
@@ -274,6 +279,7 @@ public class HiveGui implements Listener {
             }
             hive.getLarvaeStored().put(tier, amount);
         }
+
 
         hiveManager.saveHive(id, hive);
     }
