@@ -84,6 +84,9 @@ public class HiveMenuGui implements Listener {
         event.setCancelled(true);
         Player player = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
+        if (slot < event.getView().getTopInventory().getSize()) {
+            event.getView().setCursor(null);
+        }
         List<Hive> list = hiveManager.getHives(id);
         if (slot < config.maxHivesPerPlayer) {
             if (slot < list.size()) {
@@ -129,7 +132,6 @@ public class HiveMenuGui implements Listener {
             }
             open(player);
         } else if (slot == 25) {
-            event.getView().setCursor(null);
             Bukkit.getScheduler().runTask(BeesPlugin.getPlugin(BeesPlugin.class), () -> infusionGui.open(player));
         }
     }
