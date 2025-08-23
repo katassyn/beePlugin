@@ -54,6 +54,7 @@ public class InfusionGui implements Listener {
         Inventory top = event.getView().getTopInventory();
         if (raw < top.getSize()) {
             event.setCancelled(true);
+            Player player = (Player) event.getWhoClicked();
             if (raw == LARVA_SLOT) {
                 ItemStack cursor = event.getCursor();
                 ItemStack current = event.getCurrentItem();
@@ -65,7 +66,10 @@ public class InfusionGui implements Listener {
                     top.setItem(raw, cursor);
                     event.getView().setCursor(null);
                 } else if (current != null && !current.getType().toString().endsWith("GLASS_PANE")) {
-                    event.getView().setCursor(current);
+                    Map<Integer, ItemStack> left = player.getInventory().addItem(current);
+                    for (ItemStack s : left.values()) {
+                        player.getWorld().dropItem(player.getLocation(), s);
+                    }
                     top.setItem(raw, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
                 }
             } else if (raw == HONEY_SLOT) {
@@ -79,14 +83,15 @@ public class InfusionGui implements Listener {
                     top.setItem(raw, cursor);
                     event.getView().setCursor(null);
                 } else if (current != null && !current.getType().toString().endsWith("GLASS_PANE")) {
-                    event.getView().setCursor(current);
+                    Map<Integer, ItemStack> left = player.getInventory().addItem(current);
+                    for (ItemStack s : left.values()) {
+                        player.getWorld().dropItem(player.getLocation(), s);
+                    }
                     top.setItem(raw, createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey"));
                 }
             } else if (raw == INFUSE_SLOT) {
-                Player player = (Player) event.getWhoClicked();
-                Inventory inv = top;
-                ItemStack larvaStack = inv.getItem(LARVA_SLOT);
-                ItemStack honeyStack = inv.getItem(HONEY_SLOT);
+                ItemStack larvaStack = top.getItem(LARVA_SLOT);
+                ItemStack honeyStack = top.getItem(HONEY_SLOT);
                 BeeItems.BeeItem larva = BeeItems.parse(larvaStack);
                 Tier honeyTier = BeeItems.parseHoney(honeyStack);
                 if (larva == null || larva.type() != BeeType.LARVA || larvaStack.getAmount() != 1 || honeyTier == null) {
@@ -103,11 +108,11 @@ public class InfusionGui implements Listener {
                 }
                 honeyStack.setAmount(honeyStack.getAmount() - required);
                 if (honeyStack.getAmount() > 0) {
-                    inv.setItem(HONEY_SLOT, honeyStack);
+                    top.setItem(HONEY_SLOT, honeyStack);
                 } else {
-                    inv.setItem(HONEY_SLOT, createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey"));
+                    top.setItem(HONEY_SLOT, createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey"));
                 }
-                inv.setItem(LARVA_SLOT, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
+                top.setItem(LARVA_SLOT, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
                 performInfusion(player, larva.tier());
             }
         } else {
@@ -146,19 +151,7 @@ public class InfusionGui implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
         UUID id = event.getPlayer().getUniqueId();
-        if (!viewers.remove(id)) return;
-        Player player = (Player) event.getPlayer();
-        Inventory inv = event.getInventory();
-        returnItem(player, inv.getItem(LARVA_SLOT));
-        returnItem(player, inv.getItem(HONEY_SLOT));
-    }
-
-    private void returnItem(Player player, ItemStack stack) {
-        if (stack == null || stack.getType().isAir() || stack.getType().toString().endsWith("GLASS_PANE")) return;
-        Map<Integer, ItemStack> left = player.getInventory().addItem(stack);
-        for (ItemStack s : left.values()) {
-            player.getWorld().dropItem(player.getLocation(), s);
-        }
+        viewers.remove(id);
     }
 
     private BeeType rollType(Map<BeeType, Double> weights) {
