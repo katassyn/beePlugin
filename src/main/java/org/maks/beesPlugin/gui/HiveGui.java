@@ -109,24 +109,31 @@ public class HiveGui implements Listener {
         if (raw < top.getSize()) {
             BeeType beeSlot = slotType(raw);
             if (beeSlot != null) {
+                event.setCancelled(true);
                 ItemStack cursor = event.getCursor();
                 ItemStack current = event.getCurrentItem();
                 if (cursor != null && !cursor.getType().isAir()) {
                     BeeItems.BeeItem bee = BeeItems.parse(cursor);
-                    if (bee == null || bee.type() != beeSlot || cursor.getAmount() != 1) {
-                        event.setCancelled(true);
+                    if (bee == null || bee.type() != beeSlot) {
                         return;
                     }
-                    event.setCancelled(true);
-                    top.setItem(raw, cursor);
-                    event.getView().setCursor(null);
-                } else if (current != null && current.getType().toString().endsWith("GLASS_PANE")) {
-                    event.setCancelled(true);
-                    return;
-                }
-                if (event.isShiftClick() || event.getClick() == ClickType.NUMBER_KEY ||
-                        event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
-                    event.setCancelled(true);
+                    if (event.getClick() == ClickType.RIGHT && cursor.getAmount() > 1) {
+                        ItemStack one = cursor.clone();
+                        one.setAmount(1);
+                        top.setItem(raw, one);
+                        cursor.setAmount(cursor.getAmount() - 1);
+                        event.getView().setCursor(cursor);
+                    } else if (cursor.getAmount() == 1) {
+                        top.setItem(raw, cursor);
+                        event.getView().setCursor(null);
+                    } else {
+                        return;
+                    }
+                    refreshInfo(top);
+                } else if (current != null && !current.getType().toString().endsWith("GLASS_PANE")) {
+                    top.setItem(raw, null);
+                    event.getView().setCursor(current);
+                    refreshInfo(top);
                 }
             } else if (isHoneySlot(raw) || isLarvaSlot(raw) || isInfoSlot(raw)) {
                 event.setCancelled(true);
@@ -325,6 +332,31 @@ public class HiveGui implements Listener {
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         item.setItemMeta(meta);
         return item;
+    }
+
+    private void refreshInfo(Inventory inv) {
+        Hive temp = new Hive(0);
+        ItemStack queenStack = inv.getItem(QUEEN_SLOT);
+        BeeItems.BeeItem queen = BeeItems.parse(queenStack);
+        if (queen != null && queen.type() == BeeType.QUEEN) {
+            temp.setQueen(queen.tier());
+        }
+        for (int i = 0; i < config.workerSlots && i < WORKER_SLOTS.length; i++) {
+            ItemStack it = inv.getItem(WORKER_SLOTS[i]);
+            BeeItems.BeeItem bee = BeeItems.parse(it);
+            if (bee != null && bee.type() == BeeType.WORKER) {
+                temp.getWorkers().add(bee.tier());
+            }
+        }
+        for (int i = 0; i < config.droneSlots && i < DRONE_SLOTS.length; i++) {
+            ItemStack it = inv.getItem(DRONE_SLOTS[i]);
+            BeeItems.BeeItem bee = BeeItems.parse(it);
+            if (bee != null && bee.type() == BeeType.DRONE) {
+                temp.getDrones().add(bee.tier());
+            }
+        }
+        inv.setItem(HONEY_RATE_SLOT, createHoneyRateInfo(temp));
+        inv.setItem(LARVA_RATE_SLOT, createLarvaRateInfo(temp));
     }
 }
 
