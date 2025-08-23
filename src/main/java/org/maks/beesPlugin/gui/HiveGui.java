@@ -16,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.maks.beesPlugin.config.BeesConfig;
+import org.maks.beesPlugin.config.DroneConfig;
 import org.maks.beesPlugin.hive.BeeType;
 import org.maks.beesPlugin.hive.Hive;
 import org.maks.beesPlugin.hive.HiveManager;
@@ -296,6 +297,7 @@ public class HiveGui implements Listener {
         double rate = hive.honeyPerMinute(config);
         List<String> lore = new ArrayList<>();
         lore.add(ChatColor.GRAY + "Per minute: " + ChatColor.WHITE + String.format(Locale.US, "%.1f", rate));
+        lore.add(ChatColor.GRAY + "Units per bottle: " + ChatColor.WHITE + String.format(Locale.US, "%.0f", config.unitPerBottle));
         double bonus = hive.getQueen() != null ? config.queens.get(hive.getQueen()).rarityBonus() : 0;
         double rare = config.baseRare * (1.0 + bonus) * 100.0;
         double legend = config.baseLegendary * (1.0 + 0.5 * bonus) * 100.0;
@@ -318,11 +320,31 @@ public class HiveGui implements Listener {
         List<String> lore = new ArrayList<>();
         String fmt = rate < 1 ? "%.3f" : "%.1f";
         lore.add(ChatColor.GRAY + "Per minute: " + ChatColor.WHITE + String.format(Locale.US, fmt, rate));
+        lore.add(ChatColor.GRAY + "Units per larva: " + ChatColor.WHITE + String.format(Locale.US, "%.0f", config.unitPerLarva));
         lore.add(ChatColor.GRAY + "Chance:");
+
         Map<Tier, Double> weights = new EnumMap<>(Tier.class);
-        for (Tier t : hive.getDrones()) {
-            weights.merge(t, config.drones.get(t).larvaePerTick(), Double::sum);
+        // base biases
+        weights.put(Tier.I, 0.50);
+        weights.put(Tier.II, 0.20);
+        weights.put(Tier.III, 0.10);
+
+        final double[][] LARVAE_DIST = {
+                {0.80, 0.18, 0.02},
+                {0.70, 0.25, 0.05},
+                {0.60, 0.30, 0.10}
+        };
+
+        for (Tier droneTier : hive.getDrones()) {
+            DroneConfig dc = config.drones.get(droneTier);
+            double lpt = dc.larvaePerTick();
+            int idx = droneTier.getLevel() - 1;
+            double[] dist = LARVAE_DIST[idx];
+            weights.merge(Tier.I, lpt * dist[0], Double::sum);
+            weights.merge(Tier.II, lpt * dist[1], Double::sum);
+            weights.merge(Tier.III, lpt * dist[2], Double::sum);
         }
+
         double total = 0.0;
         for (double w : weights.values()) total += w;
         for (Tier t : Tier.values()) {
