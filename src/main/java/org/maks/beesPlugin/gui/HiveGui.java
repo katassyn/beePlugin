@@ -74,10 +74,30 @@ public class HiveGui implements Listener {
             if (d >= DRONE_SLOTS.length) break;
             inv.setItem(DRONE_SLOTS[d++], BeeItems.createBee(BeeType.DRONE, t));
         }
-        inv.setItem(HONEY_SLOT, createHoneyInfo(hive));
-        inv.setItem(LARVA_SLOT, createLarvaeInfo(hive));
-        open.put(player.getUniqueId(), index);
+        for (int i = 0; i < HONEY_STORAGE_SLOTS.length; i++) {
+            Tier t = Tier.values()[i];
+            int amount = hive.getHoneyStored().get(t);
+            ItemStack stack = amount > 0 ? BeeItems.createHoney(t) : createPane(Material.BLACK_STAINED_GLASS_PANE, " ");
+            if (amount > 0) {
+                stack.setAmount(Math.min(64, amount));
+            }
+            inv.setItem(HONEY_STORAGE_SLOTS[i], stack);
+        }
+
+        for (int i = 0; i < LARVA_STORAGE_SLOTS.length; i++) {
+            Tier t = Tier.values()[i];
+            int amount = hive.getLarvaeStored().get(t);
+            ItemStack stack = amount > 0 ? BeeItems.createBee(BeeType.LARVA, t) : createPane(Material.BLACK_STAINED_GLASS_PANE, " ");
+            if (amount > 0) {
+                stack.setAmount(Math.min(64, amount));
+            }
+            inv.setItem(LARVA_STORAGE_SLOTS[i], stack);
+        }
+
+        inv.setItem(HONEY_RATE_SLOT, createHoneyRateInfo(hive));
+        inv.setItem(LARVA_RATE_SLOT, createLarvaRateInfo(hive));
         player.openInventory(inv);
+        open.put(player.getUniqueId(), index);
     }
 
     @EventHandler
@@ -87,25 +107,34 @@ public class HiveGui implements Listener {
         int raw = event.getRawSlot();
         Inventory top = event.getView().getTopInventory();
         if (raw < top.getSize()) {
-            if (!isBeeSlot(raw)) {
-                event.setCancelled(true);
-                return;
-            }
-            ItemStack cursor = event.getCursor();
-            ItemStack current = event.getCurrentItem();
-            BeeType expected = slotType(raw);
-            if (cursor != null && !cursor.getType().isAir()) {
-                BeeItems.BeeItem bee = BeeItems.parse(cursor);
-                if (bee == null || bee.type() != expected || cursor.getAmount() != 1) {
+            BeeType beeSlot = slotType(raw);
+            if (beeSlot != null) {
+                ItemStack cursor = event.getCursor();
+                ItemStack current = event.getCurrentItem();
+                if (cursor != null && !cursor.getType().isAir()) {
+                    BeeItems.BeeItem bee = BeeItems.parse(cursor);
+                    if (bee == null || bee.type() != beeSlot || cursor.getAmount() != 1) {
+                        event.setCancelled(true);
+                        return;
+                    }
+                    event.setCancelled(true);
+                    top.setItem(raw, cursor);
+                    event.getView().setCursor(null);
+                } else if (current != null && current.getType().toString().endsWith("GLASS_PANE")) {
                     event.setCancelled(true);
                     return;
                 }
-            } else if (current != null && current.getType().toString().endsWith("GLASS_PANE")) {
+                if (event.isShiftClick() || event.getClick() == ClickType.NUMBER_KEY ||
+                        event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+                    event.setCancelled(true);
+                }
+            } else if (isHoneySlot(raw) || isLarvaSlot(raw) || isInfoSlot(raw)) {
                 event.setCancelled(true);
-                return;
+            } else {
+                event.setCancelled(true);
             }
-            if (event.isShiftClick() || event.getClick() == ClickType.NUMBER_KEY ||
-                    event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+        } else {
+            if (event.isShiftClick()) {
                 event.setCancelled(true);
             }
         }
@@ -125,6 +154,9 @@ public class HiveGui implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
+        Inventory inv = event.getInventory();
+        if (inv.getSize() != 54) return;
+
         UUID id = event.getPlayer().getUniqueId();
         Integer idx = open.remove(id);
         if (idx == null) return;
@@ -132,26 +164,32 @@ public class HiveGui implements Listener {
         List<Hive> list = hiveManager.getHives(id);
         if (idx < 0 || idx >= list.size()) return;
         Hive hive = list.get(idx);
-        Inventory inv = event.getInventory();
 
         hive.setQueen(null);
         hive.getWorkers().clear();
         hive.getDrones().clear();
 
-        ItemStack queenStack = inv.getItem(QUEEN_SLOT);
+        ItemStack queenStack = QUEEN_SLOT < inv.getSize() ? inv.getItem(QUEEN_SLOT) : null;
         if (queenStack != null) {
-            BeeItems.BeeItem bee = BeeItems.parse(queenStack);
-            if (bee != null && bee.type() == BeeType.QUEEN && queenStack.getAmount() == 1) {
-                hive.setQueen(bee.tier());
+            if (queenStack.getType().toString().endsWith("GLASS_PANE")) {
+                // placeholder, ignore
             } else {
-                giveBack((Player) event.getPlayer(), queenStack);
-                inv.setItem(QUEEN_SLOT, null);
+                BeeItems.BeeItem bee = BeeItems.parse(queenStack);
+                if (bee != null && bee.type() == BeeType.QUEEN && queenStack.getAmount() == 1) {
+                    hive.setQueen(bee.tier());
+                } else {
+                    giveBack((Player) event.getPlayer(), queenStack);
+                    inv.setItem(QUEEN_SLOT, null);
+                }
             }
         }
 
         for (int i = 0; i < config.workerSlots && i < WORKER_SLOTS.length; i++) {
-            ItemStack it = inv.getItem(WORKER_SLOTS[i]);
+            int slot = WORKER_SLOTS[i];
+            if (slot >= inv.getSize()) break;
+            ItemStack it = inv.getItem(slot);
             if (it == null) continue;
+            if (it.getType().toString().endsWith("GLASS_PANE")) continue;
             BeeItems.BeeItem bee = BeeItems.parse(it);
             if (bee != null && bee.type() == BeeType.WORKER && it.getAmount() == 1) {
                 hive.getWorkers().add(bee.tier());
@@ -162,8 +200,10 @@ public class HiveGui implements Listener {
 
         for (int i = 0; i < config.droneSlots && i < DRONE_SLOTS.length; i++) {
             int slot = DRONE_SLOTS[i];
+            if (slot >= inv.getSize()) break;
             ItemStack it = inv.getItem(slot);
             if (it == null) continue;
+            if (it.getType().toString().endsWith("GLASS_PANE")) continue;
             BeeItems.BeeItem bee = BeeItems.parse(it);
             if (bee != null && bee.type() == BeeType.DRONE && it.getAmount() == 1) {
                 hive.getDrones().add(bee.tier());
@@ -171,18 +211,55 @@ public class HiveGui implements Listener {
                 giveBack((Player) event.getPlayer(), it);
             }
         }
+
+        // update honey storage
+        for (int i = 0; i < HONEY_STORAGE_SLOTS.length; i++) {
+            int slot = HONEY_STORAGE_SLOTS[i];
+            ItemStack stack = slot < inv.getSize() ? inv.getItem(slot) : null;
+            Tier tier = Tier.values()[i];
+            int amount = 0;
+            if (stack != null && stack.getType() == Material.HONEY_BOTTLE) {
+                Tier parsed = BeeItems.parseHoney(stack);
+                if (parsed == tier) {
+                    amount = Math.min(stack.getAmount(), config.honeyStorageLimit);
+                } else {
+                    giveBack((Player) event.getPlayer(), stack);
+                }
+            } else if (stack != null && !stack.getType().toString().endsWith("GLASS_PANE")) {
+                giveBack((Player) event.getPlayer(), stack);
+            }
+            hive.getHoneyStored().put(tier, amount);
+        }
+
+        // update larva storage
+        for (int i = 0; i < LARVA_STORAGE_SLOTS.length; i++) {
+            int slot = LARVA_STORAGE_SLOTS[i];
+            ItemStack stack = slot < inv.getSize() ? inv.getItem(slot) : null;
+            Tier tier = Tier.values()[i];
+            int amount = 0;
+            if (stack != null && stack.getType() == Material.COOKIE) {
+                BeeItems.BeeItem bee = BeeItems.parse(stack);
+                if (bee != null && bee.type() == BeeType.LARVA && bee.tier() == tier) {
+                    amount = Math.min(stack.getAmount(), config.larvaeStorageLimit);
+                } else {
+                    giveBack((Player) event.getPlayer(), stack);
+                }
+            } else if (stack != null && !stack.getType().toString().endsWith("GLASS_PANE")) {
+                giveBack((Player) event.getPlayer(), stack);
+            }
+            hive.getLarvaeStored().put(tier, amount);
+        }
+
         hiveManager.saveHive(id, hive);
     }
 
-    private static final int QUEEN_SLOT = 22;
-    private static final int[] WORKER_SLOTS = {10,11,12,13,14,15};
-    private static final int[] DRONE_SLOTS = {28,29,30,31,32,33};
-    private static final int HONEY_SLOT = 39;
-    private static final int LARVA_SLOT = 41;
-
-    private boolean isBeeSlot(int slot) {
-        return slotType(slot) != null;
-    }
+    private static final int QUEEN_SLOT = 13;
+    private static final int[] WORKER_SLOTS = {10,11,12,14,15,16};
+    private static final int[] DRONE_SLOTS = {28,29,30,32,33,34};
+    private static final int HONEY_RATE_SLOT = 37;
+    private static final int[] HONEY_STORAGE_SLOTS = {38,39,40};
+    private static final int[] LARVA_STORAGE_SLOTS = {47,48,49};
+    private static final int LARVA_RATE_SLOT = 46;
 
     private BeeType slotType(int slot) {
         if (slot == QUEEN_SLOT) return BeeType.QUEEN;
@@ -193,6 +270,24 @@ public class HiveGui implements Listener {
             if (slot == DRONE_SLOTS[i]) return BeeType.DRONE;
         }
         return null;
+    }
+
+    private boolean isHoneySlot(int slot) {
+        for (int s : HONEY_STORAGE_SLOTS) {
+            if (slot == s) return true;
+        }
+        return false;
+    }
+
+    private boolean isLarvaSlot(int slot) {
+        for (int s : LARVA_STORAGE_SLOTS) {
+            if (slot == s) return true;
+        }
+        return false;
+    }
+
+    private boolean isInfoSlot(int slot) {
+        return slot == HONEY_RATE_SLOT || slot == LARVA_RATE_SLOT;
     }
 
     private ItemStack createPane(Material material, String name) {
@@ -210,35 +305,44 @@ public class HiveGui implements Listener {
         }
     }
 
-    private ItemStack createHoneyInfo(Hive hive) {
-        ItemStack item = new ItemStack(Material.HONEYCOMB);
+    private ItemStack createHoneyRateInfo(Hive hive) {
+        ItemStack item = new ItemStack(Material.HONEY_BOTTLE);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GOLD + "Honey");
-        List<String> lore = new ArrayList<>();
+        meta.setDisplayName(ChatColor.GOLD + "Honey Info");
         double rate = hive.honeyPerMinute(config);
-        lore.add(ChatColor.GRAY + "Rate: " + ChatColor.WHITE + String.format(Locale.US, "%.1f", rate) + "/min");
-        lore.add(ChatColor.GRAY + "Stored:");
-        for (Tier t : Tier.values()) {
-            int stored = hive.getHoneyStored().get(t);
-            lore.add(ChatColor.WHITE + t.name() + ChatColor.GRAY + ": " + stored + "/" + config.honeyStorageLimit);
-        }
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "Per minute: " + ChatColor.WHITE + String.format(Locale.US, "%.1f", rate));
+        double bonus = hive.getQueen() != null ? config.queens.get(hive.getQueen()).rarityBonus() : 0;
+        double rare = config.baseRare * (1.0 + bonus) * 100.0;
+        double legend = config.baseLegendary * (1.0 + 0.5 * bonus) * 100.0;
+        double common = Math.max(0, 100.0 - rare - legend);
+        lore.add(ChatColor.GRAY + "Chance:");
+        lore.add(ChatColor.WHITE + "I" + ChatColor.GRAY + ": " + String.format(Locale.US, "%.1f", common) + "%");
+        lore.add(ChatColor.WHITE + "II" + ChatColor.GRAY + ": " + String.format(Locale.US, "%.1f", rare) + "%");
+        lore.add(ChatColor.WHITE + "III" + ChatColor.GRAY + ": " + String.format(Locale.US, "%.1f", legend) + "%");
         meta.setLore(lore);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
         item.setItemMeta(meta);
         return item;
     }
 
-    private ItemStack createLarvaeInfo(Hive hive) {
-        ItemStack item = new ItemStack(Material.SLIME_BALL);
+    private ItemStack createLarvaRateInfo(Hive hive) {
+        ItemStack item = new ItemStack(Material.COOKIE);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(ChatColor.GREEN + "Larvae");
-        List<String> lore = new ArrayList<>();
+        meta.setDisplayName(ChatColor.GREEN + "Larva Info");
         double rate = hive.larvaePerMinute(config);
-        lore.add(ChatColor.GRAY + "Rate: " + ChatColor.WHITE + String.format(Locale.US, "%.1f", rate) + "/min");
-        lore.add(ChatColor.GRAY + "Stored:");
+        List<String> lore = new ArrayList<>();
+        lore.add(ChatColor.GRAY + "Per minute: " + ChatColor.WHITE + String.format(Locale.US, "%.1f", rate));
+        lore.add(ChatColor.GRAY + "Chance:");
+        Map<Tier, Double> weights = new EnumMap<>(Tier.class);
+        for (Tier t : hive.getDrones()) {
+            weights.merge(t, config.drones.get(t).larvaePerTick(), Double::sum);
+        }
+        double total = 0.0;
+        for (double w : weights.values()) total += w;
         for (Tier t : Tier.values()) {
-            int stored = hive.getLarvaeStored().get(t);
-            lore.add(ChatColor.WHITE + t.name() + ChatColor.GRAY + ": " + stored + "/" + config.larvaeStorageLimit);
+            double pct = total > 0 ? (weights.getOrDefault(t, 0.0) / total) * 100.0 : (t == Tier.I ? 100.0 : 0.0);
+            lore.add(ChatColor.WHITE + t.name() + ChatColor.GRAY + ": " + String.format(Locale.US, "%.1f", pct) + "%");
         }
         meta.setLore(lore);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
