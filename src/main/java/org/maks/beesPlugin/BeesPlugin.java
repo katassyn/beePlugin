@@ -39,6 +39,7 @@ public final class BeesPlugin extends JavaPlugin {
             database = new Database(url, user, password);
         } catch (SQLException e) {
             getLogger().severe("Failed to init database: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
             return;
         }
         HiveBeeDao hiveBeeDao = new HiveBeeDao(database);
