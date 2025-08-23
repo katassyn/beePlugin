@@ -15,7 +15,7 @@ import java.util.regex.Pattern;
 public class BeeItems {
 
     public static ItemStack createHoney(Tier tier) {
-        ItemStack item = new ItemStack(Material.HONEY_BOTTLE);
+        ItemStack item = new ItemStack(Material.HONEYCOMB);
         ItemMeta meta = item.getItemMeta();
         meta.addEnchant(Enchantment.DURABILITY, 10, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
@@ -24,7 +24,7 @@ public class BeeItems {
             case II -> "§5";
             case III -> "§6";
         };
-        meta.setDisplayName(color + "[ " + tier.getLevel() + " ] Honey Bottle");
+        meta.setDisplayName(color + "[ " + tier.getLevel() + " ] Honey Comb");
         meta.setLore(List.of("§o§7Applies a new §fQuality§7 to an item."));
         meta.setUnbreakable(true);
         item.setItemMeta(meta);
@@ -34,7 +34,7 @@ public class BeeItems {
     public static ItemStack createBee(BeeType type, Tier tier) {
         Material material = switch (type) {
             case WORKER, QUEEN, DRONE -> Material.BREAD;
-            case LARVA -> Material.COOKIE;
+            case LARVA -> Material.SLIME_BALL;
         };
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -64,7 +64,7 @@ public class BeeItems {
     public static BeeItem parse(ItemStack item) {
         if (item == null) return null;
         Material type = item.getType();
-        if (type != Material.BREAD && type != Material.COOKIE) return null;
+        if (type != Material.BREAD && type != Material.SLIME_BALL) return null;
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return null;
         String stripped = meta.getDisplayName().replaceAll("§[0-9a-fk-or]", "");
@@ -88,7 +88,7 @@ public class BeeItems {
     }
 
     public static Tier parseHoney(ItemStack item) {
-        if (item == null || item.getType() != Material.HONEY_BOTTLE) return null;
+        if (item == null || item.getType() != Material.HONEYCOMB) return null;
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return null;
         String stripped = meta.getDisplayName().replaceAll("§[0-9a-fk-or]", "");

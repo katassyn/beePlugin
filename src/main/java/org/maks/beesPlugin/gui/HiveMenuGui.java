@@ -18,6 +18,7 @@ import org.maks.beesPlugin.hive.BeeType;
 import org.maks.beesPlugin.hive.Tier;
 import org.maks.beesPlugin.item.BeeItems;
 import org.maks.beesPlugin.gui.InfusionGui;
+import org.maks.beesPlugin.util.NumberFormatter;
 import net.milkbowl.vault.economy.Economy;
 
 import java.util.*;
@@ -55,7 +56,7 @@ public class HiveMenuGui implements Listener {
                 item = new ItemStack(Material.BARRIER);
                 ItemMeta meta = item.getItemMeta();
                 meta.setDisplayName(ChatColor.RED + "Buy Hive");
-                meta.setLore(List.of(ChatColor.GRAY + "Cost: " + String.format("%.0f", cost)));
+                meta.setLore(List.of(ChatColor.GRAY + "Cost: " + NumberFormatter.format(cost)));
                 item.setItemMeta(meta);
             }
             inv.setItem(i, item);
@@ -108,16 +109,15 @@ public class HiveMenuGui implements Listener {
                             BeeItems.createBee(BeeType.WORKER, Tier.I),
                             BeeItems.createBee(BeeType.DRONE, Tier.I)
                     );
-                    if (hiveManager.hasInventorySpace(player, new ArrayList<>(starters))) {
-                        for (ItemStack it : starters) {
-                            player.getInventory().addItem(it);
+                    for (ItemStack it : starters) {
+                        var left = player.getInventory().addItem(it);
+                        for (ItemStack s : left.values()) {
+                            player.getWorld().dropItem(player.getLocation(), s);
                         }
-                    } else {
-                        player.sendMessage(ChatColor.RED + "Not enough inventory space for starter bees");
                     }
                 }
                 player.sendMessage(ChatColor.GREEN + "Bought new hive");
-                open(player);
+                hiveGui.open(player, list.size() - 1);
             }
         } else if (slot == 26) {
             if (hiveManager.collectAll(player)) {
