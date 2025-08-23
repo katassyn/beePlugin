@@ -111,8 +111,9 @@ public class BeeItems {
                 );
             }
             case LARVA -> List.of(ChatColor.ITALIC + "" + ChatColor.GRAY + "Can transform into any type of bee.");
-
         };
+        meta.setDisplayName(name);
+
         meta.setLore(lore);
         meta.setUnbreakable(true);
         item.setItemMeta(meta);

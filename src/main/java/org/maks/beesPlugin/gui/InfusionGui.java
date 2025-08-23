@@ -90,7 +90,7 @@ public class InfusionGui implements Listener {
                 BeeItems.BeeItem larva = BeeItems.parse(larvaStack);
                 Tier honeyTier = BeeItems.parseHoney(honeyStack);
                 if (larva == null || larva.type() != BeeType.LARVA || larvaStack.getAmount() != 1 || honeyTier == null) {
-                    player.sendMessage(ChatColor.RED + "Insert one larva and one honey bottle");
+
                     return;
                 }
                 BeesConfig.InfusionCost cost = config.infusionCost.get(larva.tier());
@@ -100,7 +100,7 @@ public class InfusionGui implements Listener {
                     case III -> cost.honeyIII();
                 };
                 if (honeyStack.getAmount() < required) {
-                    player.sendMessage(ChatColor.RED + "Not enough honey");
+
                     return;
                 }
                 honeyStack.setAmount(honeyStack.getAmount() - required);
