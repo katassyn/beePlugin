@@ -7,7 +7,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/** CRUD access to the hive_bees table. */
+/** CRUD access to the bees_hive_bees table. */
 public class HiveBeeDao {
     private final Database db;
 
@@ -16,7 +16,7 @@ public class HiveBeeDao {
     }
 
     public List<Tier> loadBees(Connection conn, int hiveId, BeeType type) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement("SELECT tier FROM hive_bees WHERE hive_id=? AND type=? ORDER BY slot")) {
+        try (PreparedStatement ps = conn.prepareStatement("SELECT tier FROM bees_hive_bees WHERE hive_id=? AND type=? ORDER BY slot")) {
             ps.setInt(1, hiveId);
             ps.setString(2, type.name());
             try (ResultSet rs = ps.executeQuery()) {
@@ -30,12 +30,12 @@ public class HiveBeeDao {
     }
 
     public void replaceBees(Connection conn, int hiveId, BeeType type, List<Tier> bees) throws SQLException {
-        try (PreparedStatement del = conn.prepareStatement("DELETE FROM hive_bees WHERE hive_id=? AND type=?")) {
+        try (PreparedStatement del = conn.prepareStatement("DELETE FROM bees_hive_bees WHERE hive_id=? AND type=?")) {
             del.setInt(1, hiveId);
             del.setString(2, type.name());
             del.executeUpdate();
         }
-        try (PreparedStatement ins = conn.prepareStatement("INSERT INTO hive_bees(hive_id,type,slot,tier) VALUES (?,?,?,?)")) {
+        try (PreparedStatement ins = conn.prepareStatement("INSERT INTO bees_hive_bees(hive_id,type,slot,tier) VALUES (?,?,?,?)")) {
             int slot = 0;
             for (Tier t : bees) {
                 ins.setInt(1, hiveId);

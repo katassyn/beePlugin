@@ -21,10 +21,10 @@ public class Database {
 
     private void init() throws SQLException {
         try (Connection conn = getConnection(); Statement st = conn.createStatement()) {
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS players(" +
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS bees_players(" +
                     "uuid VARCHAR(36) PRIMARY KEY" +
                     ") ENGINE=InnoDB");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS hives(" +
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS bees_hives(" +
                     "id INT AUTO_INCREMENT PRIMARY KEY," +
                     "player_uuid VARCHAR(36) NOT NULL," +
                     "last_tick BIGINT NOT NULL," +
@@ -36,13 +36,13 @@ public class Database {
                     "larvae_iii INT NOT NULL DEFAULT 0," +
                     "queen INT" +
                     ") ENGINE=InnoDB");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS hive_bees(" +
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS bees_hive_bees(" +
                     "hive_id INT NOT NULL," +
                     "type VARCHAR(255) NOT NULL," +
                     "slot INT NOT NULL," +
                     "tier INT NOT NULL" +
                     ") ENGINE=InnoDB");
-            st.executeUpdate("CREATE TABLE IF NOT EXISTS bee_locker(" +
+            st.executeUpdate("CREATE TABLE IF NOT EXISTS bees_locker(" +
                     "player_uuid VARCHAR(36) NOT NULL," +
                     "type VARCHAR(255) NOT NULL," +
                     "tier INT NOT NULL," +
