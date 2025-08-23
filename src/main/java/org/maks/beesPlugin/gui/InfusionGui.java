@@ -6,11 +6,11 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
+import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
-import org.bukkit.event.inventory.ClickType;
-import org.bukkit.event.inventory.InventoryAction;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -37,12 +37,13 @@ public class InfusionGui implements Listener {
         for (int i = 0; i < inv.getSize(); i++) {
             inv.setItem(i, filler);
         }
-        ItemStack larvaPlaceholder = createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva");
-        ItemStack honeyPlaceholder = createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey");
-        for (int slot : HONEY_SLOTS) {
-            inv.setItem(slot, honeyPlaceholder);
-        }
-        inv.setItem(LARVA_SLOT, larvaPlaceholder);
+        inv.setItem(HONEY_SLOT, createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey"));
+        inv.setItem(LARVA_SLOT, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
+        ItemStack button = new ItemStack(Material.ANVIL);
+        ItemMeta bm = button.getItemMeta();
+        bm.setDisplayName(ChatColor.AQUA + "Infuse");
+        button.setItemMeta(bm);
+        inv.setItem(INFUSE_SLOT, button);
         viewers.add(player.getUniqueId());
         player.openInventory(inv);
     }
@@ -67,7 +68,7 @@ public class InfusionGui implements Listener {
                     event.setCancelled(true);
                     return;
                 }
-            } else if (isHoneySlot(raw)) {
+            } else if (raw == HONEY_SLOT) {
                 ItemStack cursor = event.getCursor();
                 ItemStack current = event.getCurrentItem();
                 if (cursor != null && !cursor.getType().isAir()) {
@@ -80,14 +81,61 @@ public class InfusionGui implements Listener {
                     event.setCancelled(true);
                     return;
                 }
+            } else if (raw == INFUSE_SLOT) {
+                event.setCancelled(true);
+                Player player = (Player) event.getWhoClicked();
+                Inventory inv = top;
+                ItemStack larvaStack = inv.getItem(LARVA_SLOT);
+                ItemStack honeyStack = inv.getItem(HONEY_SLOT);
+                BeeItems.BeeItem larva = BeeItems.parse(larvaStack);
+                Tier honeyTier = BeeItems.parseHoney(honeyStack);
+                if (larva == null || larva.type() != BeeType.LARVA || larvaStack.getAmount() != 1 || honeyTier == null) {
+                    return;
+                }
+                BeesConfig.InfusionCost cost = config.infusionCost.get(larva.tier());
+                int required = switch (honeyTier) {
+                    case I -> cost.honeyI();
+                    case II -> cost.honeyII();
+                    case III -> cost.honeyIII();
+                };
+                if (honeyStack.getAmount() < required) {
+                    return;
+                }
+                honeyStack.setAmount(honeyStack.getAmount() - required);
+                if (honeyStack.getAmount() > 0) {
+                    inv.setItem(HONEY_SLOT, honeyStack);
+                } else {
+                    inv.setItem(HONEY_SLOT, createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey"));
+                }
+                inv.setItem(LARVA_SLOT, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
+                performInfusion(player, larva.tier());
             } else {
                 event.setCancelled(true);
                 return;
             }
             if (event.isShiftClick() || event.getClick() == ClickType.NUMBER_KEY ||
-                    event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
+                    event.getAction() == InventoryAction.COLLECT_TO_CURSOR ||
+                    event.getAction().name().contains("DROP")) {
                 event.setCancelled(true);
             }
+        } else {
+            if (event.isShiftClick()) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
+    private void performInfusion(Player player, Tier larvaTier) {
+        Map<BeeType, Double> weights = config.infusionTypeWeights.get(larvaTier);
+        BeeType resultType = rollType(weights);
+        BeesConfig.TierShift shift = config.infusionTierShift.get(larvaTier);
+        int tierShift = rollTierShift(shift);
+        int newLevel = Math.min(3, Math.max(1, larvaTier.getLevel() + tierShift));
+        Tier resultTier = Tier.fromLevel(newLevel);
+        ItemStack bee = BeeItems.createBee(resultType, resultTier);
+        Map<Integer, ItemStack> left = player.getInventory().addItem(bee);
+        for (ItemStack s : left.values()) {
+            player.getWorld().dropItem(player.getLocation(), s);
         }
     }
 
@@ -107,84 +155,15 @@ public class InfusionGui implements Listener {
     public void onClose(InventoryCloseEvent event) {
         UUID id = event.getPlayer().getUniqueId();
         if (!viewers.remove(id)) return;
-
         Player player = (Player) event.getPlayer();
         Inventory inv = event.getInventory();
+        returnItem(player, inv.getItem(LARVA_SLOT));
+        returnItem(player, inv.getItem(HONEY_SLOT));
+    }
 
-        ItemStack larvaStack = inv.getItem(LARVA_SLOT);
-        BeeItems.BeeItem larva = BeeItems.parse(larvaStack);
-        if (larva == null || larva.type() != BeeType.LARVA || larvaStack.getAmount() != 1) {
-            returnItems(player, inv.getContents());
-            player.sendMessage(ChatColor.RED + "Place exactly one larva in the middle.");
-            return;
-        }
-        Tier larvaTier = larva.tier();
-        BeesConfig.InfusionCost cost = config.infusionCost.get(larvaTier);
-        if (cost == null) {
-            returnItems(player, inv.getContents());
-            return;
-        }
-
-        EnumMap<Tier, Integer> honeyCounts = new EnumMap<>(Tier.class);
-        boolean invalid = false;
-        for (int i = 0; i < inv.getSize(); i++) {
-            if (i == LARVA_SLOT) continue;
-            ItemStack stack = inv.getItem(i);
-            if (stack == null) continue;
-            Tier t = BeeItems.parseHoney(stack);
-            if (t == null) {
-                invalid = true;
-                break;
-            }
-            honeyCounts.merge(t, stack.getAmount(), Integer::sum);
-        }
-        if (invalid) {
-            returnItems(player, inv.getContents());
-            player.sendMessage(ChatColor.RED + "Only honey bottles around the larva are allowed.");
-            return;
-        }
-
-        if (honeyCounts.getOrDefault(Tier.I, 0) < cost.honeyI() ||
-            honeyCounts.getOrDefault(Tier.II, 0) < cost.honeyII() ||
-            honeyCounts.getOrDefault(Tier.III, 0) < cost.honeyIII()) {
-            returnItems(player, inv.getContents());
-            player.sendMessage(ChatColor.RED + "Not enough honey for infusion.");
-            return;
-        }
-
-        // return excess honey
-        int excessI = honeyCounts.getOrDefault(Tier.I, 0) - cost.honeyI();
-        int excessII = honeyCounts.getOrDefault(Tier.II, 0) - cost.honeyII();
-        int excessIII = honeyCounts.getOrDefault(Tier.III, 0) - cost.honeyIII();
-        List<ItemStack> extras = new ArrayList<>();
-        if (excessI > 0) {
-            ItemStack hi = BeeItems.createHoney(Tier.I);
-            hi.setAmount(excessI);
-            extras.add(hi);
-        }
-        if (excessII > 0) {
-            ItemStack hi = BeeItems.createHoney(Tier.II);
-            hi.setAmount(excessII);
-            extras.add(hi);
-        }
-        if (excessIII > 0) {
-            ItemStack hi = BeeItems.createHoney(Tier.III);
-            hi.setAmount(excessIII);
-            extras.add(hi);
-        }
-        returnItems(player, extras.toArray(new ItemStack[0]));
-
-        // determine bee type
-        Map<BeeType, Double> weights = config.infusionTypeWeights.get(larvaTier);
-        BeeType resultType = rollType(weights);
-
-        BeesConfig.TierShift shift = config.infusionTierShift.get(larvaTier);
-        int tierShift = rollTierShift(shift);
-        int newLevel = Math.min(3, Math.max(1, larvaTier.getLevel() + tierShift));
-        Tier resultTier = Tier.fromLevel(newLevel);
-
-        ItemStack bee = BeeItems.createBee(resultType, resultTier);
-        Map<Integer, ItemStack> left = player.getInventory().addItem(bee);
+    private void returnItem(Player player, ItemStack stack) {
+        if (stack == null || stack.getType().isAir() || stack.getType().toString().endsWith("GLASS_PANE")) return;
+        Map<Integer, ItemStack> left = player.getInventory().addItem(stack);
         for (ItemStack s : left.values()) {
             player.getWorld().dropItem(player.getLocation(), s);
         }
@@ -212,24 +191,6 @@ public class InfusionGui implements Listener {
         return 2;
     }
 
-    private void returnItems(Player player, ItemStack[] items) {
-        for (ItemStack stack : items) {
-            if (stack == null || stack.getType().isAir() || stack.getType().toString().endsWith("GLASS_PANE")) continue;
-            Map<Integer, ItemStack> left = player.getInventory().addItem(stack);
-            for (ItemStack s : left.values()) {
-                player.getWorld().dropItem(player.getLocation(), s);
-            }
-        }
-    }
-
-    private static final int LARVA_SLOT = 4;
-    private static final int[] HONEY_SLOTS = {0,1,2,3,5,6,7,8};
-
-    private boolean isHoneySlot(int slot) {
-        for (int s : HONEY_SLOTS) if (slot == s) return true;
-        return false;
-    }
-
     private ItemStack createPane(Material material, String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -237,4 +198,9 @@ public class InfusionGui implements Listener {
         item.setItemMeta(meta);
         return item;
     }
+
+    private static final int HONEY_SLOT = 3;
+    private static final int LARVA_SLOT = 5;
+    private static final int INFUSE_SLOT = 4;
 }
+
