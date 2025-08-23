@@ -229,6 +229,7 @@ public class HiveGui implements Listener {
     private static final int LARVA_RATE_SLOT = 44;
     private static final int LARVA_CHANCE_SLOT = 45;
 
+
     private boolean isBeeSlot(int slot) {
         return slotType(slot) != null;
     }
