@@ -274,7 +274,6 @@ public class HiveGui implements Listener {
     private boolean isInfoSlot(int slot) {
         return slot == HONEY_RATE_SLOT || slot == LARVA_RATE_SLOT;
     }
-
     private ItemStack createPane(Material material, String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();

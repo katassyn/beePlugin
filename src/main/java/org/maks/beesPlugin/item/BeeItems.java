@@ -83,6 +83,7 @@ public class BeeItems {
                 yield List.of(
                         ChatColor.ITALIC + "" + ChatColor.GRAY + "Hive multiplier: " + ChatColor.WHITE + mult,
                         ChatColor.ITALIC + "" + ChatColor.GRAY + "Rarer honey chance: " + ChatColor.GREEN + chance
+
                 );
             }
             case WORKER -> {
@@ -112,6 +113,7 @@ public class BeeItems {
             case LARVA -> List.of(ChatColor.ITALIC + "" + ChatColor.GRAY + "Can transform into any type of bee.");
         };
         meta.setDisplayName(name);
+
         meta.setLore(lore);
         meta.setUnbreakable(true);
         item.setItemMeta(meta);

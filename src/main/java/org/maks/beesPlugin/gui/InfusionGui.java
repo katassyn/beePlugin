@@ -90,6 +90,7 @@ public class InfusionGui implements Listener {
                 BeeItems.BeeItem larva = BeeItems.parse(larvaStack);
                 Tier honeyTier = BeeItems.parseHoney(honeyStack);
                 if (larva == null || larva.type() != BeeType.LARVA || larvaStack.getAmount() != 1 || honeyTier == null) {
+
                     return;
                 }
                 BeesConfig.InfusionCost cost = config.infusionCost.get(larva.tier());
@@ -99,6 +100,7 @@ public class InfusionGui implements Listener {
                     case III -> cost.honeyIII();
                 };
                 if (honeyStack.getAmount() < required) {
+
                     return;
                 }
                 honeyStack.setAmount(honeyStack.getAmount() - required);
