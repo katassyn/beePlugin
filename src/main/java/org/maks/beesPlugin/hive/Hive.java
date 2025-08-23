@@ -158,7 +158,19 @@ public class Hive {
             DroneConfig dc = cfg.drones.get(t);
             cut += dc.honeyPenaltyPerTick();
             larvae += dc.larvaePerTick();
-            larvaeWeights.merge(t, dc.larvaePerTick(), Double::sum);
+            double w = dc.larvaePerTick();
+            switch (t) {
+                case I -> larvaeWeights.merge(Tier.I, w, Double::sum);
+                case II -> {
+                    larvaeWeights.merge(Tier.I, w * 0.25, Double::sum);
+                    larvaeWeights.merge(Tier.II, w * 0.75, Double::sum);
+                }
+                case III -> {
+                    larvaeWeights.merge(Tier.I, w * 0.10, Double::sum);
+                    larvaeWeights.merge(Tier.II, w * 0.30, Double::sum);
+                    larvaeWeights.merge(Tier.III, w * 0.60, Double::sum);
+                }
+            }
         }
         double net = Math.max(0, base - cut) * qc.multiplier();
         double larv = larvae * qc.multiplier();

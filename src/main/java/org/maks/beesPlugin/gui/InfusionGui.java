@@ -116,7 +116,7 @@ public class InfusionGui implements Listener {
                 performInfusion(player, larva.tier());
             }
         } else {
-            if (event.isShiftClick()) {
+            if (event.isShiftClick() || event.getAction() == org.bukkit.event.inventory.InventoryAction.COLLECT_TO_CURSOR) {
                 event.setCancelled(true);
             }
         }
@@ -151,7 +151,23 @@ public class InfusionGui implements Listener {
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
         UUID id = event.getPlayer().getUniqueId();
-        viewers.remove(id);
+        if (!viewers.remove(id)) return;
+        Inventory inv = event.getInventory();
+        Player player = (Player) event.getPlayer();
+        ItemStack honey = inv.getItem(HONEY_SLOT);
+        if (honey != null && !honey.getType().toString().endsWith("GLASS_PANE")) {
+            Map<Integer, ItemStack> left = player.getInventory().addItem(honey);
+            for (ItemStack s : left.values()) {
+                player.getWorld().dropItem(player.getLocation(), s);
+            }
+        }
+        ItemStack larva = inv.getItem(LARVA_SLOT);
+        if (larva != null && !larva.getType().toString().endsWith("GLASS_PANE")) {
+            Map<Integer, ItemStack> left = player.getInventory().addItem(larva);
+            for (ItemStack s : left.values()) {
+                player.getWorld().dropItem(player.getLocation(), s);
+            }
+        }
     }
 
     private BeeType rollType(Map<BeeType, Double> weights) {
