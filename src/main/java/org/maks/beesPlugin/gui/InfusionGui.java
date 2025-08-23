@@ -60,7 +60,7 @@ public class InfusionGui implements Listener {
                 ItemStack current = event.getCurrentItem();
                 if (cursor != null && !cursor.getType().isAir()) {
                     BeeItems.BeeItem bee = BeeItems.parse(cursor);
-                    if (bee == null || bee.type() != BeeType.LARVA || cursor.getAmount() != 1) {
+                    if (bee == null || bee.type() != BeeType.LARVA) {
                         return;
                     }
                     top.setItem(raw, cursor);
@@ -94,21 +94,33 @@ public class InfusionGui implements Listener {
                 ItemStack honeyStack = top.getItem(HONEY_SLOT);
                 BeeItems.BeeItem larva = BeeItems.parse(larvaStack);
                 Tier honeyTier = BeeItems.parseHoney(honeyStack);
-                if (larva == null || larva.type() != BeeType.LARVA || larvaStack.getAmount() != 1 || honeyTier == null) {
+                if (larva == null || larva.type() != BeeType.LARVA || honeyTier == null) {
                     return;
                 }
                 int required = 1;
-                if (honeyStack.getAmount() < required) {
+                int larvaCount = larvaStack.getAmount();
+                int honeyCount = honeyStack.getAmount();
+                int runs = Math.min(larvaCount, honeyCount / required);
+                if (runs <= 0) {
                     return;
                 }
-                honeyStack.setAmount(honeyStack.getAmount() - required);
-                if (honeyStack.getAmount() > 0) {
+                honeyCount -= runs * required;
+                larvaCount -= runs;
+                if (honeyCount > 0) {
+                    honeyStack.setAmount(honeyCount);
                     top.setItem(HONEY_SLOT, honeyStack);
                 } else {
                     top.setItem(HONEY_SLOT, createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey"));
                 }
-                top.setItem(LARVA_SLOT, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
-                performInfusion(player, larva.tier(), honeyTier);
+                if (larvaCount > 0) {
+                    larvaStack.setAmount(larvaCount);
+                    top.setItem(LARVA_SLOT, larvaStack);
+                } else {
+                    top.setItem(LARVA_SLOT, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
+                }
+                for (int i = 0; i < runs; i++) {
+                    performInfusion(player, larva.tier(), honeyTier);
+                }
             }
         } else {
             if (event.isShiftClick() || event.getAction() == org.bukkit.event.inventory.InventoryAction.COLLECT_TO_CURSOR) {
