@@ -8,7 +8,7 @@ import java.sql.*;
 import java.util.*;
 import java.util.UUID;
 
-/** DAO encapsulating CRUD operations for hives and hive_bees. */
+/** DAO encapsulating CRUD operations for bees_hives and bees_hive_bees. */
 public class HiveDao {
     private final Database db;
     private final HiveBeeDao beeDao;
@@ -21,7 +21,7 @@ public class HiveDao {
     public List<Hive> loadHives(UUID player, long now) throws SQLException {
         List<Hive> list = new ArrayList<>();
         try (Connection conn = db.getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT id,last_tick,queen,honey_i,honey_ii,honey_iii,larvae_i,larvae_ii,larvae_iii FROM hives WHERE player_uuid=?")) {
+             PreparedStatement ps = conn.prepareStatement("SELECT id,last_tick,queen,honey_i,honey_ii,honey_iii,larvae_i,larvae_ii,larvae_iii FROM bees_hives WHERE player_uuid=?")) {
             ps.setString(1, player.toString());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
@@ -48,7 +48,7 @@ public class HiveDao {
 
     public int createHive(Connection conn, UUID player, Hive hive) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(
-                "INSERT INTO hives(player_uuid,last_tick,queen) VALUES (?,?,?)",
+                "INSERT INTO bees_hives(player_uuid,last_tick,queen) VALUES (?,?,?)",
                 Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, player.toString());
             ps.setLong(2, hive.getLastTick());
@@ -66,7 +66,7 @@ public class HiveDao {
     }
 
     public void updateHive(Connection conn, UUID player, Hive hive) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement("UPDATE hives SET last_tick=?,queen=?,honey_i=?,honey_ii=?,honey_iii=?,larvae_i=?,larvae_ii=?,larvae_iii=? WHERE id=? AND player_uuid=?")) {
+        try (PreparedStatement ps = conn.prepareStatement("UPDATE bees_hives SET last_tick=?,queen=?,honey_i=?,honey_ii=?,honey_iii=?,larvae_i=?,larvae_ii=?,larvae_iii=? WHERE id=? AND player_uuid=?")) {
             ps.setLong(1, hive.getLastTick());
             if (hive.getQueen() == null) ps.setNull(2, Types.INTEGER); else ps.setInt(2, hive.getQueen().getLevel());
             ps.setInt(3, hive.getHoneyStored().get(Tier.I));
@@ -84,11 +84,11 @@ public class HiveDao {
     }
 
     public void deleteHive(Connection conn, int id) throws SQLException {
-        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM hives WHERE id=?")) {
+        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM bees_hives WHERE id=?")) {
             ps.setInt(1, id);
             ps.executeUpdate();
         }
-        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM hive_bees WHERE hive_id=?")) {
+        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM bees_hive_bees WHERE hive_id=?")) {
             ps.setInt(1, id);
             ps.executeUpdate();
         }
