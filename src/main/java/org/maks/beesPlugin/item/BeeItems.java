@@ -1,5 +1,6 @@
 package org.maks.beesPlugin.item;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.ItemFlag;
@@ -20,25 +21,25 @@ public class BeeItems {
         meta.addEnchant(Enchantment.DURABILITY, 10, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
         String color = switch (tier) {
-            case I -> "§9";
-            case II -> "§5";
-            case III -> "§6";
+            case I -> ChatColor.BLUE.toString();
+            case II -> ChatColor.DARK_PURPLE.toString();
+            case III -> ChatColor.GOLD.toString();
         };
         meta.setDisplayName(color + "[ " + tier.name() + " ] Honey Bottle");
         List<String> lore = new java.util.ArrayList<>();
-        lore.add("§o§7Applies a new §fQuality§7 to an item.");
+        lore.add(ChatColor.ITALIC + "" + ChatColor.GRAY + "Applies a new " + ChatColor.WHITE + "Quality" + ChatColor.GRAY + " to an item.");
         switch (tier) {
             case I -> lore.addAll(List.of(
-                    "§o§7Roll range: §f-10% §7to §f+10%.",
-                    "§o§7Basic crafting material"
+                    ChatColor.ITALIC + "" + ChatColor.GRAY + "Roll range: " + ChatColor.WHITE + "-10% " + ChatColor.GRAY + "to " + ChatColor.WHITE + "+10%.",
+                    ChatColor.ITALIC + "" + ChatColor.GRAY + "Basic crafting material"
             ));
             case II -> lore.addAll(List.of(
-                    "§o§7Roll range: §f0% §7to §f+20%.",
-                    "§o§aRare crafting material"
+                    ChatColor.ITALIC + "" + ChatColor.GRAY + "Roll range: " + ChatColor.WHITE + "0% " + ChatColor.GRAY + "to " + ChatColor.WHITE + "+20%.",
+                    ChatColor.ITALIC + "" + ChatColor.GRAY + ChatColor.GREEN + "Rare" + ChatColor.GRAY + " crafting material"
             ));
             case III -> lore.addAll(List.of(
-                    "§o§7Roll range: §f+10% §7to §f+30%.",
-                    "§o§cLegendary crafting material"
+                    ChatColor.ITALIC + "" + ChatColor.GRAY + "Roll range: " + ChatColor.WHITE + "+10% " + ChatColor.GRAY + "to " + ChatColor.WHITE + "+30%.",
+                    ChatColor.ITALIC + "" + ChatColor.GRAY + ChatColor.RED + "Legendary" + ChatColor.GRAY + " crafting material"
             ));
         }
         meta.setLore(lore);
@@ -57,9 +58,9 @@ public class BeeItems {
         meta.addEnchant(Enchantment.DURABILITY, 10, true);
         meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_UNBREAKABLE);
         String color = switch (tier) {
-            case I -> "§9";
-            case II -> "§5";
-            case III -> "§6";
+            case I -> ChatColor.BLUE.toString();
+            case II -> ChatColor.DARK_PURPLE.toString();
+            case III -> ChatColor.GOLD.toString();
         };
         String name = color + "[ " + tier.name() + " ] " + switch (type) {
             case WORKER -> "Worker Bee";
@@ -80,8 +81,9 @@ public class BeeItems {
                     case III -> "+15%";
                 };
                 yield List.of(
-                        "§o§7Hive multiplier: §f" + mult,
-                        "§o§7Rarer honey chance: §a" + chance
+                        ChatColor.ITALIC + "" + ChatColor.GRAY + "Hive multiplier: " + ChatColor.WHITE + mult,
+                        ChatColor.ITALIC + "" + ChatColor.GRAY + "Rarer honey chance: " + ChatColor.GREEN + chance
+
                 );
             }
             case WORKER -> {
@@ -90,7 +92,7 @@ public class BeeItems {
                     case II -> "0.75";
                     case III -> "1.00";
                 };
-                yield List.of("§o§7Base honey production: §f" + prod);
+                yield List.of(ChatColor.ITALIC + "" + ChatColor.GRAY + "Base honey production: " + ChatColor.WHITE + prod);
             }
             case DRONE -> {
                 String larvae = switch (tier) {
@@ -104,11 +106,12 @@ public class BeeItems {
                     case III -> "-0.50";
                 };
                 yield List.of(
-                        "§o§7Larvae production: §f" + larvae,
-                        "§o§7Reduces base honey production: §f" + penalty
+                        ChatColor.ITALIC + "" + ChatColor.GRAY + "Larvae production: " + ChatColor.WHITE + larvae,
+                        ChatColor.ITALIC + "" + ChatColor.GRAY + "Reduces base honey production: " + ChatColor.WHITE + penalty
                 );
             }
-            case LARVA -> List.of("§o§7Can transform into any type of bee.");
+            case LARVA -> List.of(ChatColor.ITALIC + "" + ChatColor.GRAY + "Can transform into any type of bee.");
+
         };
         meta.setLore(lore);
         meta.setUnbreakable(true);
