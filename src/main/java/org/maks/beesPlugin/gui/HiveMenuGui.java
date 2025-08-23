@@ -101,8 +101,9 @@ public class HiveMenuGui implements Listener {
                         return;
                     }
                 }
+                boolean firstHive = list.isEmpty();
                 Hive hive = hiveManager.createHive(id, System.currentTimeMillis() / 1000);
-                if (hive != null && list.isEmpty()) {
+                if (hive != null && firstHive) {
                     var starters = List.of(
                             BeeItems.createBee(BeeType.QUEEN, Tier.I),
                             BeeItems.createBee(BeeType.WORKER, Tier.I),
