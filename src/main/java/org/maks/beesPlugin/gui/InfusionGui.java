@@ -97,12 +97,7 @@ public class InfusionGui implements Listener {
                 if (larva == null || larva.type() != BeeType.LARVA || larvaStack.getAmount() != 1 || honeyTier == null) {
                     return;
                 }
-                BeesConfig.InfusionCost cost = config.infusionCost.get(larva.tier());
-                int required = switch (honeyTier) {
-                    case I -> cost.honeyI();
-                    case II -> cost.honeyII();
-                    case III -> cost.honeyIII();
-                };
+                int required = 1;
                 if (honeyStack.getAmount() < required) {
                     return;
                 }
@@ -113,7 +108,7 @@ public class InfusionGui implements Listener {
                     top.setItem(HONEY_SLOT, createPane(Material.ORANGE_STAINED_GLASS_PANE, ChatColor.GRAY + "Honey"));
                 }
                 top.setItem(LARVA_SLOT, createPane(Material.WHITE_STAINED_GLASS_PANE, ChatColor.GRAY + "Larva"));
-                performInfusion(player, larva.tier());
+                performInfusion(player, larva.tier(), honeyTier);
             }
         } else {
             if (event.isShiftClick() || event.getAction() == org.bukkit.event.inventory.InventoryAction.COLLECT_TO_CURSOR) {
@@ -122,11 +117,47 @@ public class InfusionGui implements Listener {
         }
     }
 
-    private void performInfusion(Player player, Tier larvaTier) {
-        Map<BeeType, Double> weights = config.infusionTypeWeights.get(larvaTier);
-        BeeType resultType = rollType(weights);
-        BeesConfig.TierShift shift = config.infusionTierShift.get(larvaTier);
-        int tierShift = rollTierShift(shift);
+    private void performInfusion(Player player, Tier larvaTier, Tier honeyTier) {
+        Map<BeeType, Double> baseWeights = config.infusionTypeWeights.get(larvaTier);
+        double honeyMult = 1.0 + 0.25 * (honeyTier.getLevel() - 1);
+        Map<BeeType, Double> adjustedWeights = new EnumMap<>(BeeType.class);
+        for (Map.Entry<BeeType, Double> e : baseWeights.entrySet()) {
+            double w = e.getValue();
+            if (e.getKey() == BeeType.QUEEN) {
+                w *= honeyMult;
+            }
+            adjustedWeights.put(e.getKey(), w);
+        }
+        BeeType resultType = rollType(adjustedWeights);
+
+        BeesConfig.TierShift baseShift = config.infusionTierShift.get(larvaTier);
+        double honeyBoost = 0.2 * (honeyTier.getLevel() - 1);
+        double larvaBoost = 0.3 * (larvaTier.getLevel() - 1);
+
+        double down1 = baseShift.down1();
+        double same = baseShift.same();
+        double up1 = baseShift.up1();
+        double up2 = baseShift.up2();
+
+        double bonus = honeyBoost + larvaBoost;
+        up1 += bonus * up1;
+        up2 += bonus * up2;
+        down1 *= 1.0 - bonus / 2;
+        same *= 1.0 - bonus / 2;
+
+        double total = down1 + same + up1 + up2;
+        down1 /= total;
+        same /= total;
+        up1 /= total;
+        up2 /= total;
+
+        double r = random.nextDouble();
+        int tierShift;
+        if (r < down1) tierShift = -1;
+        else if (r < down1 + same) tierShift = 0;
+        else if (r < down1 + same + up1) tierShift = 1;
+        else tierShift = 2;
+
         int newLevel = Math.min(3, Math.max(1, larvaTier.getLevel() + tierShift));
         Tier resultTier = Tier.fromLevel(newLevel);
         ItemStack bee = BeeItems.createBee(resultType, resultTier);
@@ -180,16 +211,6 @@ public class InfusionGui implements Listener {
             if (r <= cumulative) return e.getKey();
         }
         return BeeType.WORKER;
-    }
-
-    private int rollTierShift(BeesConfig.TierShift shift) {
-        double r = random.nextDouble();
-        if (r < shift.down1()) return -1;
-        r -= shift.down1();
-        if (r < shift.same()) return 0;
-        r -= shift.same();
-        if (r < shift.up1()) return 1;
-        return 2;
     }
 
     private ItemStack createPane(Material material, String name) {
