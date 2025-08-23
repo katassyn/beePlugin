@@ -261,6 +261,7 @@ public class HiveGui implements Listener {
     private static final int[] LARVA_STORAGE_SLOTS = {47,48,49};
     private static final int LARVA_RATE_SLOT = 46;
 
+
     private BeeType slotType(int slot) {
         if (slot == QUEEN_SLOT) return BeeType.QUEEN;
         for (int i = 0; i < config.workerSlots && i < WORKER_SLOTS.length; i++) {
@@ -289,7 +290,6 @@ public class HiveGui implements Listener {
     private boolean isInfoSlot(int slot) {
         return slot == HONEY_RATE_SLOT || slot == LARVA_RATE_SLOT;
     }
-
     private ItemStack createPane(Material material, String name) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
