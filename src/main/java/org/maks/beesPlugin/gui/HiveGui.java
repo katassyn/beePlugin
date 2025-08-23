@@ -74,10 +74,14 @@ public class HiveGui implements Listener {
             if (d >= DRONE_SLOTS.length) break;
             inv.setItem(DRONE_SLOTS[d++], BeeItems.createBee(BeeType.DRONE, t));
         }
-        inv.setItem(HONEY_SLOT, createHoneyInfo(hive));
-        inv.setItem(LARVA_SLOT, createLarvaeInfo(hive));
-        open.put(player.getUniqueId(), index);
+        for (int slot : HONEY_SLOTS) {
+            inv.setItem(slot, createHoneyInfo(hive));
+        }
+        for (int slot : LARVA_SLOTS) {
+            inv.setItem(slot, createLarvaeInfo(hive));
+        }
         player.openInventory(inv);
+        open.put(player.getUniqueId(), index);
     }
 
     @EventHandler
@@ -108,6 +112,11 @@ public class HiveGui implements Listener {
                     event.getAction() == InventoryAction.COLLECT_TO_CURSOR) {
                 event.setCancelled(true);
             }
+        } else {
+            // Bottom inventory interaction
+            if (event.isShiftClick()) {
+                event.setCancelled(true);
+            }
         }
     }
 
@@ -125,6 +134,9 @@ public class HiveGui implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
+        Inventory inv = event.getInventory();
+        if (inv.getSize() != 54) return;
+
         UUID id = event.getPlayer().getUniqueId();
         Integer idx = open.remove(id);
         if (idx == null) return;
@@ -132,13 +144,12 @@ public class HiveGui implements Listener {
         List<Hive> list = hiveManager.getHives(id);
         if (idx < 0 || idx >= list.size()) return;
         Hive hive = list.get(idx);
-        Inventory inv = event.getInventory();
 
         hive.setQueen(null);
         hive.getWorkers().clear();
         hive.getDrones().clear();
 
-        ItemStack queenStack = inv.getItem(QUEEN_SLOT);
+        ItemStack queenStack = QUEEN_SLOT < inv.getSize() ? inv.getItem(QUEEN_SLOT) : null;
         if (queenStack != null) {
             BeeItems.BeeItem bee = BeeItems.parse(queenStack);
             if (bee != null && bee.type() == BeeType.QUEEN && queenStack.getAmount() == 1) {
@@ -150,7 +161,9 @@ public class HiveGui implements Listener {
         }
 
         for (int i = 0; i < config.workerSlots && i < WORKER_SLOTS.length; i++) {
-            ItemStack it = inv.getItem(WORKER_SLOTS[i]);
+            int slot = WORKER_SLOTS[i];
+            if (slot >= inv.getSize()) break;
+            ItemStack it = inv.getItem(slot);
             if (it == null) continue;
             BeeItems.BeeItem bee = BeeItems.parse(it);
             if (bee != null && bee.type() == BeeType.WORKER && it.getAmount() == 1) {
@@ -162,6 +175,7 @@ public class HiveGui implements Listener {
 
         for (int i = 0; i < config.droneSlots && i < DRONE_SLOTS.length; i++) {
             int slot = DRONE_SLOTS[i];
+            if (slot >= inv.getSize()) break;
             ItemStack it = inv.getItem(slot);
             if (it == null) continue;
             BeeItems.BeeItem bee = BeeItems.parse(it);
@@ -177,8 +191,8 @@ public class HiveGui implements Listener {
     private static final int QUEEN_SLOT = 22;
     private static final int[] WORKER_SLOTS = {10,11,12,13,14,15};
     private static final int[] DRONE_SLOTS = {28,29,30,31,32,33};
-    private static final int HONEY_SLOT = 39;
-    private static final int LARVA_SLOT = 41;
+    private static final int[] HONEY_SLOTS = {37,38,39};
+    private static final int[] LARVA_SLOTS = {41,42,43};
 
     private boolean isBeeSlot(int slot) {
         return slotType(slot) != null;
@@ -211,7 +225,7 @@ public class HiveGui implements Listener {
     }
 
     private ItemStack createHoneyInfo(Hive hive) {
-        ItemStack item = new ItemStack(Material.HONEYCOMB);
+        ItemStack item = new ItemStack(Material.HONEY_BOTTLE);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.GOLD + "Honey");
         List<String> lore = new ArrayList<>();
@@ -229,7 +243,7 @@ public class HiveGui implements Listener {
     }
 
     private ItemStack createLarvaeInfo(Hive hive) {
-        ItemStack item = new ItemStack(Material.SLIME_BALL);
+        ItemStack item = new ItemStack(Material.COOKIE);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.GREEN + "Larvae");
         List<String> lore = new ArrayList<>();
