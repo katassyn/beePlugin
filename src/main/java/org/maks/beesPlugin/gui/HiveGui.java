@@ -316,7 +316,8 @@ public class HiveGui implements Listener {
         meta.setDisplayName(ChatColor.GREEN + "Larva Info");
         double rate = hive.larvaePerMinute(config);
         List<String> lore = new ArrayList<>();
-        lore.add(ChatColor.GRAY + "Per minute: " + ChatColor.WHITE + String.format(Locale.US, "%.1f", rate));
+        String fmt = rate < 1 ? "%.3f" : "%.1f";
+        lore.add(ChatColor.GRAY + "Per minute: " + ChatColor.WHITE + String.format(Locale.US, fmt, rate));
         lore.add(ChatColor.GRAY + "Chance:");
         Map<Tier, Double> weights = new EnumMap<>(Tier.class);
         for (Tier t : hive.getDrones()) {

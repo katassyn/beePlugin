@@ -89,13 +89,13 @@ public class Hive {
      */
     public double larvaePerTick(BeesConfig cfg) {
         if (queen == null) return 0.0;
-        double larvae = 0;
+        double units = 0;
         for (Tier t : drones) {
             DroneConfig dc = cfg.drones.get(t);
-            larvae += dc.larvaePerTick();
+            units += dc.larvaePerTick();
         }
         QueenConfig qc = cfg.queens.get(queen);
-        return larvae * qc.multiplier();
+        return units * qc.multiplier() / cfg.unitPerLarva;
     }
 
     /**
@@ -153,24 +153,32 @@ public class Hive {
         }
         double cut = 0;
         double larvae = 0;
+
+        // bias towards lower tier larvae regardless of drones present
         Map<Tier, Double> larvaeWeights = new EnumMap<>(Tier.class);
-        for (Tier t : drones) {
-            DroneConfig dc = cfg.drones.get(t);
+        larvaeWeights.put(Tier.I, 0.50);
+        larvaeWeights.put(Tier.II, 0.20);
+        larvaeWeights.put(Tier.III, 0.10);
+
+        // contribution distribution per drone tier (rows sum to 1.0)
+        final double[][] LARVAE_DIST = {
+                /* I   */ {0.80, 0.18, 0.02},
+                /* II  */ {0.70, 0.25, 0.05},
+                /* III */ {0.60, 0.30, 0.10}
+        };
+
+        for (Tier droneTier : drones) {
+            DroneConfig dc = cfg.drones.get(droneTier);
             cut += dc.honeyPenaltyPerTick();
-            larvae += dc.larvaePerTick();
-            double w = dc.larvaePerTick();
-            switch (t) {
-                case I -> larvaeWeights.merge(Tier.I, w, Double::sum);
-                case II -> {
-                    larvaeWeights.merge(Tier.I, w * 0.25, Double::sum);
-                    larvaeWeights.merge(Tier.II, w * 0.75, Double::sum);
-                }
-                case III -> {
-                    larvaeWeights.merge(Tier.I, w * 0.10, Double::sum);
-                    larvaeWeights.merge(Tier.II, w * 0.30, Double::sum);
-                    larvaeWeights.merge(Tier.III, w * 0.60, Double::sum);
-                }
-            }
+            double lpt = dc.larvaePerTick();
+            larvae += lpt;
+
+            int idx = droneTier.getLevel() - 1;
+            double[] dist = LARVAE_DIST[idx];
+
+            larvaeWeights.merge(Tier.I, lpt * dist[0], Double::sum);
+            larvaeWeights.merge(Tier.II, lpt * dist[1], Double::sum);
+            larvaeWeights.merge(Tier.III, lpt * dist[2], Double::sum);
         }
         double net = Math.max(0, base - cut) * qc.multiplier();
         double larv = larvae * qc.multiplier();
@@ -187,8 +195,8 @@ public class Hive {
             }
         }
 
-        while (larvaeUnits >= 1.0) {
-            larvaeUnits -= 1.0;
+        while (larvaeUnits >= cfg.unitPerLarva) {
+            larvaeUnits -= cfg.unitPerLarva;
             Tier tier = rollLarvaTier(larvaeWeights);
             int current = larvaeStored.get(tier);
             if (current < cfg.larvaeStorageLimit) {

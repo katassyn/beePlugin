@@ -11,6 +11,7 @@ import java.util.Map;
 public class BeesConfig {
     public final int tickSeconds;
     public final double unitPerBottle;
+    public final double unitPerLarva;
     public final int offlineCapHours;
 
     public final double baseRare;
@@ -39,6 +40,7 @@ public class BeesConfig {
         ConfigurationSection bees = config.getConfigurationSection("bees");
         tickSeconds = bees.getInt("tick_seconds", 10);
         unitPerBottle = bees.getDouble("unit_per_bottle", 60.0);
+        unitPerLarva = bees.getDouble("unit_per_larva", 60.0);
         offlineCapHours = bees.getInt("offline_cap_hours", 8);
 
         ConfigurationSection rarity = bees.getConfigurationSection("rarity");

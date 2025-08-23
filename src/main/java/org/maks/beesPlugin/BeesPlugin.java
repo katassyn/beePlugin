@@ -3,6 +3,7 @@ package org.maks.beesPlugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.maks.beesPlugin.command.HiveCommand;
+import org.maks.beesPlugin.command.InfuseCommand;
 import org.maks.beesPlugin.config.BeesConfig;
 import org.maks.beesPlugin.dao.*;
 import org.maks.beesPlugin.gui.HiveGui;
@@ -49,10 +50,13 @@ public final class BeesPlugin extends JavaPlugin {
         setupEconomy();
         hiveGui = new HiveGui(hiveManager, beesConfig);
         infusionGui = new InfusionGui(beesConfig);
-        hiveMenuGui = new HiveMenuGui(hiveManager, beesConfig, economy, hiveGui, infusionGui);
+        hiveMenuGui = new HiveMenuGui(hiveManager, beesConfig, economy, hiveGui);
 
         if (getCommand("hive") != null) {
             getCommand("hive").setExecutor(new HiveCommand(hiveMenuGui));
+        }
+        if (getCommand("infuse") != null) {
+            getCommand("infuse").setExecutor(new InfuseCommand(infusionGui));
         }
         getServer().getPluginManager().registerEvents(hiveGui, this);
         getServer().getPluginManager().registerEvents(hiveMenuGui, this);

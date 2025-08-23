@@ -8,3 +8,7 @@ commands:
     description: Manage hives
     permission: beesplugin.hive
     usage: /hive
+  infuse:
+    description: Infuse a larva
+    permission: beesplugin.infuse
+    usage: /infuse

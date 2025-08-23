@@ -18,7 +18,6 @@ import org.maks.beesPlugin.hive.HiveManager;
 import org.maks.beesPlugin.hive.BeeType;
 import org.maks.beesPlugin.hive.Tier;
 import org.maks.beesPlugin.item.BeeItems;
-import org.maks.beesPlugin.gui.InfusionGui;
 import org.maks.beesPlugin.util.NumberFormatter;
 import net.milkbowl.vault.economy.Economy;
 
@@ -30,15 +29,13 @@ public class HiveMenuGui implements Listener {
     private final BeesConfig config;
     private final Economy economy;
     private final HiveGui hiveGui;
-    private final InfusionGui infusionGui;
     private final Set<UUID> viewers = new HashSet<>();
 
-    public HiveMenuGui(HiveManager hiveManager, BeesConfig config, Economy economy, HiveGui hiveGui, InfusionGui infusionGui) {
+    public HiveMenuGui(HiveManager hiveManager, BeesConfig config, Economy economy, HiveGui hiveGui) {
         this.hiveManager = hiveManager;
         this.config = config;
         this.economy = economy;
         this.hiveGui = hiveGui;
-        this.infusionGui = infusionGui;
     }
 
     public void open(Player player) {
@@ -132,7 +129,12 @@ public class HiveMenuGui implements Listener {
             }
             open(player);
         } else if (slot == 25) {
-            Bukkit.getScheduler().runTask(BeesPlugin.getPlugin(BeesPlugin.class), () -> infusionGui.open(player));
+            player.closeInventory();
+            var plugin = BeesPlugin.getPlugin(BeesPlugin.class);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                player.addAttachment(plugin, "beesplugin.infuse", true, 20);
+                player.performCommand("infuse");
+            });
         }
     }
 
