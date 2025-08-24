@@ -118,6 +118,11 @@ public class HiveGui implements Listener {
                     if (bee == null || bee.type() != beeSlot) {
                         return;
                     }
+                    // Prevent replacing an existing bee so it doesn't get lost
+                    if (current != null && !current.getType().isAir()
+                            && !current.getType().toString().endsWith("GLASS_PANE")) {
+                        return;
+                    }
                     if (event.getClick() == ClickType.RIGHT && cursor.getAmount() > 1) {
                         ItemStack one = cursor.clone();
                         one.setAmount(1);
