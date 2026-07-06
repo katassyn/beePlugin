@@ -18,12 +18,13 @@ import org.maks.beesPlugin.hive.Tier;
 import org.maks.beesPlugin.item.BeeItems;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class InfusionGui implements Listener {
 
     private final BeesConfig config;
     private final Set<UUID> viewers = new HashSet<>();
-    private final Random random = new Random();
+    // Removed unsafe Random instance - using ThreadLocalRandom instead
 
     public InfusionGui(BeesConfig config) {
         this.config = config;
@@ -163,7 +164,7 @@ public class InfusionGui implements Listener {
         up1 /= total;
         up2 /= total;
 
-        double r = random.nextDouble();
+        double r = ThreadLocalRandom.current().nextDouble();
         int tierShift;
         if (r < down1) tierShift = -1;
         else if (r < down1 + same) tierShift = 0;
@@ -216,7 +217,7 @@ public class InfusionGui implements Listener {
     private BeeType rollType(Map<BeeType, Double> weights) {
         double total = 0;
         for (double d : weights.values()) total += d;
-        double r = random.nextDouble() * total;
+        double r = ThreadLocalRandom.current().nextDouble() * total;
         double cumulative = 0;
         for (var e : weights.entrySet()) {
             cumulative += e.getValue();

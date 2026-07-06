@@ -6,6 +6,7 @@ import org.maks.beesPlugin.config.QueenConfig;
 import org.maks.beesPlugin.config.WorkerConfig;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class Hive {
     private int id;
@@ -29,7 +30,7 @@ public class Hive {
 
     public void setLastTick(long lastTick) { this.lastTick = lastTick; }
 
-    private final Random random = new Random();
+    // Removed unsafe Random instance - using ThreadLocalRandom instead
 
     public Hive(long now) {
         this.lastTick = now;
@@ -68,6 +69,13 @@ public class Hive {
      * current hive composition.
      */
     public double honeyPerTick(BeesConfig cfg) {
+        return honeyPerTick(cfg, 0.0);
+    }
+
+    /**
+     * Calculates honey per tick with pet speed bonus
+     */
+    public double honeyPerTick(BeesConfig cfg, double petSpeedBonus) {
         if (queen == null) return 0.0;
         double base = 0;
         for (Tier t : workers) {
@@ -80,7 +88,10 @@ public class Hive {
             cut += dc.honeyPenaltyPerTick();
         }
         QueenConfig qc = cfg.queens.get(queen);
-        return Math.max(0, base - cut) * qc.multiplier();
+        double baseProduction = Math.max(0, base - cut) * qc.multiplier();
+
+        // Apply pet speed bonus
+        return baseProduction * (1.0 + petSpeedBonus / 100.0);
     }
 
     /**
@@ -206,9 +217,22 @@ public class Hive {
     }
 
     private Tier rollHoneyTier(BeesConfig cfg, QueenConfig qc) {
+        return rollHoneyTier(cfg, qc, 0.0);
+    }
+
+    private Tier rollHoneyTier(BeesConfig cfg, QueenConfig qc, double petQualityBonus) {
+        // Base chances
         double rareChance = cfg.baseRare * (1.0 + qc.rarityBonus());
         double legendChance = cfg.baseLegendary * (1.0 + 0.5 * qc.rarityBonus());
-        double r = random.nextDouble();
+
+        // Apply pet quality bonus
+        if (petQualityBonus > 0) {
+            double qualityMultiplier = 1.0 + (petQualityBonus / 100.0);
+            rareChance *= qualityMultiplier;
+            legendChance *= qualityMultiplier;
+        }
+
+        double r = ThreadLocalRandom.current().nextDouble();
         if (r < legendChance) return Tier.III;
         if (r < legendChance + rareChance) return Tier.II;
         return Tier.I;
@@ -218,7 +242,7 @@ public class Hive {
         double total = 0;
         for (double w : weights.values()) total += w;
         if (total <= 0) return Tier.I;
-        double r = random.nextDouble() * total;
+        double r = ThreadLocalRandom.current().nextDouble() * total;
         double cumulative = 0;
         for (Tier t : Tier.values()) {
             double w = weights.getOrDefault(t, 0.0);

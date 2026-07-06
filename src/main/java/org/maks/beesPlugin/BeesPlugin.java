@@ -9,10 +9,12 @@ import org.maks.beesPlugin.dao.*;
 import org.maks.beesPlugin.gui.HiveGui;
 import org.maks.beesPlugin.gui.HiveMenuGui;
 import org.maks.beesPlugin.gui.InfusionGui;
+import org.maks.beesPlugin.hive.Hive;
 import org.maks.beesPlugin.hive.HiveManager;
 import net.milkbowl.vault.economy.Economy;
 
 import java.sql.SQLException;
+import java.util.UUID;
 
 public final class BeesPlugin extends JavaPlugin {
 
@@ -64,7 +66,7 @@ public final class BeesPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerListener(hiveManager, playerDao), this);
 
         long tick = beesConfig.tickSeconds * 20L;
-        getServer().getScheduler().runTaskTimer(this, () -> {
+        getServer().getScheduler().runTaskTimerAsynchronously(this, () -> {
             long now = System.currentTimeMillis() / 1000;
             hiveManager.tickAll(now);
         }, tick, tick);
@@ -85,6 +87,18 @@ public final class BeesPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // cleanup if needed
+        if (hiveManager != null) {
+            // Save all loaded hives before shutdown
+            for (UUID uuid : hiveManager.getLoadedPlayers()) {
+                for (Hive hive : hiveManager.getHives(uuid)) {
+                    hiveManager.saveHive(uuid, hive);
+                }
+            }
+        }
+        // Close database connection pool
+        if (database != null) {
+            database.close();
+            getLogger().info("Database connection pool closed");
+        }
     }
 }

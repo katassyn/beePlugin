@@ -24,12 +24,19 @@ import org.maks.beesPlugin.hive.Tier;
 import org.maks.beesPlugin.item.BeeItems;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class HiveGui implements Listener {
 
     private final HiveManager hiveManager;
     private final BeesConfig config;
-    private final Map<UUID, Integer> open = new HashMap<>();
+    private final Map<UUID, Integer> open = new ConcurrentHashMap<>();
+
+    // Track initial bee counts when opening hive: UUID -> tier counts
+    private static class TierCounts {
+        int t1 = 0, t2 = 0, t3 = 0;
+    }
+    private final Map<UUID, TierCounts> initialBeeCounts = new ConcurrentHashMap<>();
 
     public HiveGui(HiveManager hiveManager, BeesConfig config) {
         this.hiveManager = hiveManager;
@@ -97,6 +104,21 @@ public class HiveGui implements Listener {
 
         inv.setItem(HONEY_RATE_SLOT, createHoneyRateInfo(hive));
         inv.setItem(LARVA_RATE_SLOT, createLarvaRateInfo(hive));
+
+        // Track initial bee counts for quest progress
+        TierCounts initialCounts = new TierCounts();
+        for (Tier t : hive.getWorkers()) {
+            if (t == Tier.I) initialCounts.t1++;
+            else if (t == Tier.II) initialCounts.t2++;
+            else if (t == Tier.III) initialCounts.t3++;
+        }
+        for (Tier t : hive.getDrones()) {
+            if (t == Tier.I) initialCounts.t1++;
+            else if (t == Tier.II) initialCounts.t2++;
+            else if (t == Tier.III) initialCounts.t3++;
+        }
+        initialBeeCounts.put(player.getUniqueId(), initialCounts);
+
         player.openInventory(inv);
         open.put(player.getUniqueId(), index);
     }
@@ -194,6 +216,9 @@ public class HiveGui implements Listener {
             }
         }
 
+        // Track final bee counts for quest events
+        int finalBeesT1 = 0, finalBeesT2 = 0, finalBeesT3 = 0;
+
         for (int i = 0; i < config.workerSlots && i < WORKER_SLOTS.length; i++) {
             int slot = WORKER_SLOTS[i];
             if (slot >= inv.getSize()) break;
@@ -203,6 +228,9 @@ public class HiveGui implements Listener {
             BeeItems.BeeItem bee = BeeItems.parse(it);
             if (bee != null && bee.type() == BeeType.WORKER && it.getAmount() == 1) {
                 hive.getWorkers().add(bee.tier());
+                if (bee.tier() == Tier.I) finalBeesT1++;
+                else if (bee.tier() == Tier.II) finalBeesT2++;
+                else if (bee.tier() == Tier.III) finalBeesT3++;
             }
         }
 
@@ -215,8 +243,22 @@ public class HiveGui implements Listener {
             BeeItems.BeeItem bee = BeeItems.parse(it);
             if (bee != null && bee.type() == BeeType.DRONE && it.getAmount() == 1) {
                 hive.getDrones().add(bee.tier());
+                if (bee.tier() == Tier.I) finalBeesT1++;
+                else if (bee.tier() == Tier.II) finalBeesT2++;
+                else if (bee.tier() == Tier.III) finalBeesT3++;
             }
         }
+
+        // Calculate newly added bees by comparing with initial counts
+        TierCounts initial = initialBeeCounts.remove(id);
+        if (initial == null) {
+            // Fallback if initial counts weren't tracked (shouldn't happen)
+            initial = new TierCounts();
+        }
+
+        int addedBeesT1 = Math.max(0, finalBeesT1 - initial.t1);
+        int addedBeesT2 = Math.max(0, finalBeesT2 - initial.t2);
+        int addedBeesT3 = Math.max(0, finalBeesT3 - initial.t3);
 
         // update honey storage
         for (int i = 0; i < HONEY_STORAGE_SLOTS.length; i++) {
@@ -249,6 +291,46 @@ public class HiveGui implements Listener {
         }
 
         hiveManager.saveHive(id, hive);
+
+        // Fire BeeCreateEvent for QuestSystem integration
+        int totalAddedBees = addedBeesT1 + addedBeesT2 + addedBeesT3;
+        if (totalAddedBees > 0) {
+            Player player = (Player) event.getPlayer();
+            try {
+                Class<?> listenerClass = Class.forName("org.maks.questsystem.listeners.BeesListener");
+                Class<?> eventClass = null;
+                for (Class<?> innerClass : listenerClass.getDeclaredClasses()) {
+                    if (innerClass.getSimpleName().equals("BeeCreateEvent")) {
+                        eventClass = innerClass;
+                        break;
+                    }
+                }
+                if (eventClass != null) {
+                    Object questEvent = eventClass.getConstructor(Player.class, int.class, Object.class)
+                            .newInstance(player, totalAddedBees, null);
+                    Bukkit.getPluginManager().callEvent((org.bukkit.event.Event) questEvent);
+
+                    // Fire tier-specific events
+                    if (addedBeesT1 > 0) {
+                        questEvent = eventClass.getConstructor(Player.class, int.class, Object.class)
+                                .newInstance(player, addedBeesT1, Tier.I);
+                        Bukkit.getPluginManager().callEvent((org.bukkit.event.Event) questEvent);
+                    }
+                    if (addedBeesT2 > 0) {
+                        questEvent = eventClass.getConstructor(Player.class, int.class, Object.class)
+                                .newInstance(player, addedBeesT2, Tier.II);
+                        Bukkit.getPluginManager().callEvent((org.bukkit.event.Event) questEvent);
+                    }
+                    if (addedBeesT3 > 0) {
+                        questEvent = eventClass.getConstructor(Player.class, int.class, Object.class)
+                                .newInstance(player, addedBeesT3, Tier.III);
+                        Bukkit.getPluginManager().callEvent((org.bukkit.event.Event) questEvent);
+                    }
+                }
+            } catch (Exception ignored) {
+                // QuestSystem might not be loaded
+            }
+        }
     }
 
     private static final int QUEEN_SLOT = 13;

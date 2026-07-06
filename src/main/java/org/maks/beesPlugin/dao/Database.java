@@ -1,21 +1,46 @@
 package org.maks.beesPlugin.dao;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.*;
 import java.util.function.Consumer;
 
 /**
  * Simple wrapper around a JDBC connection to a MySQL database.
  * Responsible for creating the schema and running small transactions.
+ * Uses HikariCP connection pooling for better performance.
  */
 public class Database {
-    private final String url;
-    private final String user;
-    private final String password;
+    private final HikariDataSource dataSource;
 
     public Database(String url, String user, String password) throws SQLException {
-        this.url = url;
-        this.user = user;
-        this.password = password;
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(url);
+        config.setUsername(user);
+        config.setPassword(password);
+
+        // Connection pool settings
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
+        config.setConnectionTimeout(5000); // 5 seconds max wait for connection
+        config.setIdleTimeout(300000); // 5 minutes idle timeout
+        config.setMaxLifetime(1800000); // 30 minutes max lifetime
+        config.setLeakDetectionThreshold(60000); // 60 seconds leak detection
+
+        // Performance optimizations
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        config.addDataSourceProperty("useServerPrepStmts", "true");
+        config.addDataSourceProperty("useLocalSessionState", "true");
+        config.addDataSourceProperty("rewriteBatchedStatements", "true");
+        config.addDataSourceProperty("cacheResultSetMetadata", "true");
+        config.addDataSourceProperty("cacheServerConfiguration", "true");
+        config.addDataSourceProperty("elideSetAutoCommits", "true");
+        config.addDataSourceProperty("maintainTimeStats", "false");
+
+        this.dataSource = new HikariDataSource(config);
         init();
     }
 
@@ -53,7 +78,7 @@ public class Database {
     }
 
     public Connection getConnection() throws SQLException {
-        return DriverManager.getConnection(url, user, password);
+        return dataSource.getConnection();
     }
 
     /**
@@ -66,10 +91,23 @@ public class Database {
                 consumer.accept(conn);
                 conn.commit();
             } catch (Exception e) {
-                conn.rollback();
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackException) {
+                    e.addSuppressed(rollbackException);
+                }
                 if (e instanceof SQLException se) throw se;
                 else throw new SQLException("Transaction failed", e);
             }
+        }
+    }
+
+    /**
+     * Close the connection pool. Should be called on plugin disable.
+     */
+    public void close() {
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
         }
     }
 }

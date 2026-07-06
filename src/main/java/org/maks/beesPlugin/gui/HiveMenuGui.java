@@ -30,6 +30,7 @@ public class HiveMenuGui implements Listener {
     private final Economy economy;
     private final HiveGui hiveGui;
     private final Set<UUID> viewers = new HashSet<>();
+    private final Map<UUID, Inventory> openMenus = new HashMap<>();
 
     public HiveMenuGui(HiveManager hiveManager, BeesConfig config, Economy economy, HiveGui hiveGui) {
         this.hiveManager = hiveManager;
@@ -71,6 +72,7 @@ public class HiveMenuGui implements Listener {
         infuse.setItemMeta(m2);
         inv.setItem(25, infuse);
         viewers.add(player.getUniqueId());
+        openMenus.put(player.getUniqueId(), inv);
         player.openInventory(inv);
     }
 
@@ -122,12 +124,18 @@ public class HiveMenuGui implements Listener {
                 hiveGui.open(player, list.size() - 1);
             }
         } else if (slot == 26) {
-            if (hiveManager.collectAll(player)) {
-                player.sendMessage(ChatColor.GREEN + "Collected hive products");
-            } else {
-                player.sendMessage(ChatColor.RED + "Make space in your inventory first");
-            }
-            open(player);
+            player.closeInventory();
+            var plugin = BeesPlugin.getPlugin(BeesPlugin.class);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                boolean success = hiveManager.collectAll(player);
+                if (success) {
+                    player.sendMessage(ChatColor.GREEN + "Collected hive products");
+                } else {
+                    player.sendMessage(ChatColor.RED + "Make space in your inventory first");
+                }
+                player.addAttachment(plugin, "beesplugin.hive", true, 20);
+                player.performCommand("hive");
+            });
         } else if (slot == 25) {
             player.closeInventory();
             var plugin = BeesPlugin.getPlugin(BeesPlugin.class);
@@ -140,7 +148,12 @@ public class HiveMenuGui implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
-        viewers.remove(event.getPlayer().getUniqueId());
+        UUID id = event.getPlayer().getUniqueId();
+        Inventory tracked = openMenus.get(id);
+        if (tracked == null || tracked == event.getInventory()) {
+            viewers.remove(id);
+            openMenus.remove(id);
+        }
     }
 }
 

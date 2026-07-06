@@ -23,7 +23,7 @@ public class HiveCommand implements CommandExecutor {
         }
 
         if (player.getLevel() < 75) {
-            player.sendMessage(ChatColor.RED + "You must be at least level 80!");
+            player.sendMessage(ChatColor.RED + "You must be at least level 75!");
             return true;
         }
 

@@ -26,7 +26,7 @@ public class PlayerListener implements Listener {
         try {
             playerDao.createPlayer(id);
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("[BeesPlugin] Failed to create player record for " + id + ": " + e.getMessage());
         }
         hiveManager.loadPlayer(id, System.currentTimeMillis() / 1000);
     }
